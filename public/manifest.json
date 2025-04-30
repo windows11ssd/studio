@@ -1,0 +1,25 @@
+{
+  "name": "NetGauge Speed Test",
+  "short_name": "NetGauge",
+  "description": "Measure your internet connection speed with NetGauge.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FAFAFA",  /* Corresponds to --background in light mode */
+  "theme_color": "#008080", /* Corresponds to --accent */
+  "icons": [
+     {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+       "purpose": "any maskable"
+    }
+    // TODO: Add more icon sizes (e.g., 72x72, 96x96, 128x128, 144x144, 152x152, 256x256)
+    // Ensure these icon files exist in the public/icons directory
+  ]
+}
