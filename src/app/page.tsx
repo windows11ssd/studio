@@ -210,9 +210,7 @@ export default function Home() {
          />
       </main>
 
-      <footer className="mt-12 text-center text-sm text-muted-foreground">
-        Powered by Next.js & ShadCN UI
-      </footer>
+      {/* Footer removed */}
     </div>
   );
 }
