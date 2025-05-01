@@ -1,8 +1,15 @@
 import type * as React from 'react';
-import { TowerControl } from 'lucide-react';
+import { TowerControl, Info } from 'lucide-react';
 import type { CellTowerInfo } from '@/services/cell-tower';
 import { cn } from '@/lib/utils';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+
 
 interface CellTowerDisplayProps {
   cellInfo: CellTowerInfo | null;
@@ -21,12 +28,29 @@ export function CellTowerDisplay({ cellInfo, isLoading = false, className }: Cel
   return (
     <Card className={cn('w-full', className)}>
       <CardHeader className="pb-2">
-        <CardTitle className="text-base font-semibold flex items-center gap-2">
-          <TowerControl className="h-5 w-5 text-accent" />
-          Cell Tower Info
+        <CardTitle className="text-base font-semibold flex items-center justify-between gap-2">
+           <div className="flex items-center gap-2">
+             <TowerControl className="h-5 w-5 text-accent" />
+             Cell Info (Simulated)
+          </div>
+           <TooltipProvider delayDuration={100}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+              </TooltipTrigger>
+              <TooltipContent side="top" align="end" className="max-w-[250px]">
+                <p className="text-xs">Real-time cell tower details (Cell ID, LAC) are generally unavailable in web browsers. Displayed data is simulated or based on examples.</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </CardTitle>
+         {/* Optional: Add a small text description directly if tooltip isn't enough
+         <CardDescription className="text-xs pt-1 flex items-center gap-1">
+           <Info className="h-3 w-3" /> Data is simulated due to browser limitations.
+         </CardDescription>
+         */}
       </CardHeader>
-      <CardContent className="space-y-1">
+      <CardContent className="space-y-1 pt-2"> {/* Added pt-2 for spacing */}
         {isLoading ? (
           <div className="space-y-2">
             <div className="h-4 w-full animate-pulse rounded-md bg-muted" />
