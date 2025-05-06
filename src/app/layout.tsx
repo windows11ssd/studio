@@ -5,18 +5,18 @@ import { Toaster } from "@/components/ui/toaster"; // Import Toaster
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
-  subsets: ['latin'],
+  subsets: ['latin', 'arabic'], // Add Arabic subset if available and needed
 });
 
 const geistMono = Geist_Mono({
   variable: '--font-geist-mono',
-  subsets: ['latin'],
+  subsets: ['latin', 'arabic'], // Add Arabic subset if available and needed
 });
 
 // Update metadata for PWA
 export const metadata: Metadata = {
-  title: 'NetGauge Speed Test',
-  description: 'Measure your internet connection speed with NetGauge.',
+  title: 'مقياس الشبكة نت جيدج',
+  description: 'قم بقياس سرعة اتصالك بالإنترنت.',
   manifest: "/manifest.json", // Link to the manifest file
   // Optional: Add theme color and Apple-specific tags if needed
   // themeColor: "#008080", // Corresponds to --accent
@@ -33,7 +33,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="ar" dir="rtl">
        <head>
          {/* Add theme-color meta tag for PWA compatibility */}
         <meta name="theme-color" content="#008080" />

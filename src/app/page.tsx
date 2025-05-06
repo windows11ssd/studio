@@ -113,10 +113,10 @@ export default function Home() {
 
   const getGaugeLabel = () => {
     switch (currentStage) {
-      case 'ping': return 'Testing Ping...';
-      case 'download': return 'Download';
-      case 'upload': return 'Upload';
-      default: return 'Speed';
+      case 'ping': return 'جاري اختبار البينج...';
+      case 'download': return 'تنزيل';
+      case 'upload': return 'رفع';
+      default: return 'سرعة';
     }
   }
 
@@ -124,23 +124,23 @@ export default function Home() {
     if (isLoading) {
       return (
         <>
-          <RotateCw className="mr-2 h-4 w-4 animate-spin" />
-          Testing...
+          <RotateCw className="ml-2 h-4 w-4 animate-spin" />
+          جاري الاختبار...
         </>
       );
     }
     if (currentStage === 'finished') {
         return (
             <>
-             <RotateCw className="mr-2 h-4 w-4" />
-             Test Again
+             <RotateCw className="ml-2 h-4 w-4" />
+             اختبار مرة أخرى
             </>
         );
     }
     return (
       <>
-        <Play className="mr-2 h-4 w-4" />
-        Start Test
+        <Play className="ml-2 h-4 w-4" />
+        ابدأ الاختبار
       </>
     );
   };
@@ -150,9 +150,9 @@ export default function Home() {
     <div className="container mx-auto flex min-h-screen flex-col items-center justify-center p-4 md:p-8">
       <header className="mb-8 text-center">
         <h1 className="text-4xl font-bold text-primary flex items-center justify-center gap-2">
-          <Wifi className="h-8 w-8 text-accent" /> NetGauge
+          <Wifi className="h-8 w-8 text-accent" /> نت جيدج
         </h1>
-        <p className="text-muted-foreground">Measure your internet connection speed.</p>
+        <p className="text-muted-foreground">قم بقياس سرعة اتصالك بالإنترنت.</p>
       </header>
 
       <main className="flex w-full max-w-2xl flex-col items-center space-y-8">
@@ -163,6 +163,7 @@ export default function Home() {
               label={getGaugeLabel()}
               maxSpeed={150} // Adjust based on expected max speeds for visual scale
               className="mb-6"
+              unit="ميجابت/ثانية"
             />
          </div>
 
@@ -181,23 +182,23 @@ export default function Home() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
           <ResultDisplay
             icon={Gauge} // Using Gauge for Ping as WifiOff/Signal is not ideal
-            label="Ping"
+            label="البينج"
             value={results?.pingMilliseconds?.toFixed(0) ?? null}
-            unit="ms"
+            unit="مللي ثانية"
             isLoading={isLoading && currentStage !== 'idle'}
           />
           <ResultDisplay
             icon={ArrowDownToLine}
-            label="Download"
+            label="تنزيل"
             value={results?.downloadSpeedMbps?.toFixed(1) ?? null}
-            unit="Mbps"
+            unit="ميجابت/ثانية"
             isLoading={isLoading && currentStage !== 'idle' && currentStage !== 'ping'}
           />
           <ResultDisplay
             icon={ArrowUpFromLine}
-            label="Upload"
+            label="رفع"
             value={results?.uploadSpeedMbps?.toFixed(1) ?? null}
-            unit="Mbps"
+            unit="ميجابت/ثانية"
              isLoading={isLoading && currentStage !== 'idle' && currentStage !== 'ping' && currentStage !== 'download'}
           />
         </div>

@@ -34,7 +34,7 @@ export function ResultDisplay({
         ) : (
           <div className="text-3xl font-bold">
             {value !== null ? value : '--'}
-            <span className="ml-1 text-lg font-medium text-muted-foreground">{unit}</span>
+            <span className="mr-1 text-lg font-medium text-muted-foreground">{unit}</span>
           </div>
         )}
       </CardContent>

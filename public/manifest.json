@@ -1,7 +1,7 @@
 {
-  "name": "NetGauge Speed Test",
-  "short_name": "NetGauge",
-  "description": "Measure your internet connection speed with NetGauge.",
+  "name": "مقياس الشبكة نت جيدج",
+  "short_name": "نت جيدج",
+  "description": "قم بقياس سرعة اتصالك بالإنترنت مع نت جيدج.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#FAFAFA",  /* Corresponds to --background in light mode */

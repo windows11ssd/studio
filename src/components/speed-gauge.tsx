@@ -36,7 +36,7 @@ export function SpeedGauge({
         <div className="text-sm text-muted-foreground">{label}</div>
         <div className="text-2xl font-bold text-accent">
             {currentSpeed.toFixed(1)}
-            <span className="ml-1 text-base font-medium text-muted-foreground">{unit}</span>
+            <span className="mr-1 text-base font-medium text-muted-foreground">{unit}</span>
         </div>
        </div>
     </div>

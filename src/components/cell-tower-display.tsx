@@ -31,7 +31,7 @@ export function CellTowerDisplay({ cellInfo, isLoading = false, className }: Cel
         <CardTitle className="text-base font-semibold flex items-center justify-between gap-2">
            <div className="flex items-center gap-2">
              <TowerControl className="h-5 w-5 text-accent" />
-             Cell Info (Simulated)
+             معلومات البرج (محاكاة)
           </div>
            <TooltipProvider delayDuration={100}>
             <Tooltip>
@@ -39,7 +39,7 @@ export function CellTowerDisplay({ cellInfo, isLoading = false, className }: Cel
                 <Info className="h-4 w-4 text-muted-foreground cursor-help" />
               </TooltipTrigger>
               <TooltipContent side="top" align="end" className="max-w-[250px]">
-                <p className="text-xs">Real-time cell tower details (Cell ID, LAC) are generally unavailable in web browsers. Displayed data is simulated or based on examples.</p>
+                <p className="text-xs text-right">تفاصيل برج الخلية في الوقت الفعلي (معرف الخلية، LAC) غير متوفرة بشكل عام في متصفحات الويب. البيانات المعروضة هي محاكاة أو تستند إلى أمثلة.</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -60,7 +60,7 @@ export function CellTowerDisplay({ cellInfo, isLoading = false, className }: Cel
           </div>
         ) : (
           <>
-            {renderInfo('Cell ID', cellInfo?.cellId)}
+            {renderInfo('معرف الخلية', cellInfo?.cellId)}
             {renderInfo('LAC', cellInfo?.lac)}
             {renderInfo('MCC', cellInfo?.mcc)}
             {renderInfo('MNC', cellInfo?.mnc)}
