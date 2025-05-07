@@ -16,28 +16,16 @@ import { useIsMobile } from '@/hooks/use-mobile';
 
 type TestStage = 'idle' | 'ping' | 'download' | 'upload' | 'finished';
 
-// IMPORTANT: To enable real file download tests, you must create binary files
-// of the specified sizes in the `public/test-files/` directory.
-// For example:
-// - public/test-files/10MB.bin (10,485,760 bytes)
-// - public/test-files/100MB.bin (104,857,600 bytes)
-// - public/test-files/500MB.bin (524,288,000 bytes)
-// - public/test-files/1GB.bin (1,073,741,824 bytes)
-// You can create these files using command-line tools, e.g., on Linux/macOS:
-//   mkdir -p public/test-files
-//   dd if=/dev/zero of=public/test-files/10MB.bin bs=1M count=10
-//   dd if=/dev/zero of=public/test-files/100MB.bin bs=1M count=100
-//   dd if=/dev/zero of=public/test-files/500MB.bin bs=1M count=500
-//   dd if=/dev/zero of=public/test-files/1GB.bin bs=1M count=1024
-// If these files are not present, the download test will fail.
-
+// Using Cloudflare's speed test files.
+// The 'size' property in fileMap keys and fileTestSizes corresponds to the nominal size in MB for user display.
+// The 'sizeBytes' property in fileMap is the actual number of bytes served by Cloudflare for that file.
 const fileMap: Record<number, { path: string, sizeBytes: number }> = {
-    10: { path: '/test-files/10MB.bin', sizeBytes: 10 * 1024 * 1024 },
-    100: { path: '/test-files/100MB.bin', sizeBytes: 100 * 1024 * 1024 },
-    500: { path: '/test-files/500MB.bin', sizeBytes: 500 * 1024 * 1024 },
-    1024: { path: '/test-files/1GB.bin', sizeBytes: 1024 * 1024 * 1024 },
+    10: { path: 'https://speed.cloudflare.com/__down?bytes=10000000', sizeBytes: 10 * 1000 * 1000 },    // 10 Million Bytes
+    100: { path: 'https://speed.cloudflare.com/__down?bytes=100000000', sizeBytes: 100 * 1000 * 1000 }, // 100 Million Bytes
+    500: { path: 'https://speed.cloudflare.com/__down?bytes=500000000', sizeBytes: 500 * 1000 * 1000 }, // 500 Million Bytes
+    1000: { path: 'https://speed.cloudflare.com/__down?bytes=1000000000', sizeBytes: 1000 * 1000 * 1000 },// 1 Billion Bytes (referred to as 1GB)
 };
-const defaultFileSizeMB = 100; // Default test file size if no specific button is clicked
+const defaultFileSizeKey = 100; // Default test file key (corresponds to 100MB file)
 
 
 export default function Home() {
@@ -87,7 +75,7 @@ export default function Home() {
     };
   }, []);
 
-  const handleStartTest = async (fileSizeMBParam?: number) => {
+  const handleStartTest = async (fileSizeKeyParam?: number) => {
     if (isLoading) return;
 
     setIsLoading(true);
@@ -106,7 +94,9 @@ export default function Home() {
       uploadAnimationRef.current = null;
     }
     
-    console.log(`Starting test with file size: ${fileSizeMBParam || defaultFileSizeMB} MB`);
+    const selectedFileSizeKey = fileSizeKeyParam || defaultFileSizeKey;
+    console.log(`Starting test with file size key: ${selectedFileSizeKey}`);
+
 
     let finalDownloadSpeed = 0;
     let finalUploadSpeed = 0;
@@ -122,21 +112,23 @@ export default function Home() {
       // --- DOWNLOAD ---
       setCurrentStage('download');
       setCurrentSpeed(0);
-      const selectedFileSizeMB = fileSizeMBParam || defaultFileSizeMB;
-      const fileDetails = fileMap[selectedFileSizeMB] || fileMap[defaultFileSizeMB];
+      
+      const fileDetails = fileMap[selectedFileSizeKey] || fileMap[defaultFileSizeKey];
       const fileUrl = fileDetails.path;
       const actualFileSizeInBytes = fileDetails.sizeBytes;
+      
+      const sizeConfig = fileTestSizes.find(fts => fts.size === selectedFileSizeKey);
+      const userFriendlyFileNameForError = sizeConfig ? t(sizeConfig.labelKey) : `${selectedFileSizeKey}MB Test File`;
       
       const downloadStartTime = Date.now();
       let downloadedBytes = 0;
       let lastSpeedUpdateTime = downloadStartTime;
 
       try {
-        const response = await fetch(fileUrl, { signal });
+        const response = await fetch(fileUrl, { signal, cache: 'no-store' }); // Add cache: 'no-store'
         if (!response.ok) {
-          const fileName = fileUrl.substring(fileUrl.lastIndexOf('/') + 1);
           const statusText = `${response.status} ${response.statusText || ''}`.trim();
-          throw new Error(t('downloadErrorUserFriendly', { fileName, status: statusText }));
+          throw new Error(t('downloadErrorUserFriendly', { fileName: userFriendlyFileNameForError, status: statusText }));
         }
         if (!response.body) {
           throw new Error(t('downloadErrorNoBody'));
@@ -145,7 +137,7 @@ export default function Home() {
 
         while (true) {
           if (signal.aborted) {
-            reader.cancel(); // Attempt to cancel the stream reading
+            reader.cancel(); 
             throw new Error('Download aborted by user');
           }
           const { done, value } = await reader.read();
@@ -157,20 +149,21 @@ export default function Home() {
           
           if (elapsedTimeMs > 0) {
             const currentAvgSpeed = (downloadedBytes * 8) / (elapsedTimeMs / 1000) / 1000000; // Mbps
-            // Throttle UI updates
-            if (now - lastSpeedUpdateTime > 100) { // Update around 10 times per second
+            if (now - lastSpeedUpdateTime > 100) { 
                 setCurrentSpeed(currentAvgSpeed);
                 lastSpeedUpdateTime = now;
             }
           }
         }
         reader.releaseLock();
-        setCurrentSpeed((downloadedBytes * 8) / ((Date.now() - downloadStartTime) / 1000) / 1000000); // Final update for currentSpeed
+        const downloadEndTimeOnComplete = Date.now();
+        const finalElapsedTimeMs = downloadEndTimeOnComplete - downloadStartTime;
+        setCurrentSpeed(finalElapsedTimeMs > 0 ? (downloadedBytes * 8) / (finalElapsedTimeMs / 1000) / 1000000 : 0);
 
       } catch (fetchError: any) {
         if (fetchError.name === 'AbortError' || fetchError.message.includes('aborted')) {
           console.log('Download aborted.');
-          throw fetchError; // Re-throw to be caught by outer catch
+          throw fetchError; 
         }
         console.error('Download fetch error:', fetchError);
         toast({
@@ -178,9 +171,8 @@ export default function Home() {
             description: fetchError.message || t('downloadErrorGeneric'),
             variant: 'destructive',
         });
-        finalDownloadSpeed = 0; // Indicate failure
-        // Optionally skip to end or try to continue to upload
-        setCurrentStage('finished'); // Or some error stage
+        finalDownloadSpeed = 0; 
+        setCurrentStage('finished'); 
         setIsLoading(false);
         setCurrentSpeed(0);
         return;
@@ -196,7 +188,8 @@ export default function Home() {
       setCurrentStage('upload');
       setCurrentSpeed(0);
       const uploadBaseSpeed = 20 + Math.random() * 30; // Mbps
-      const uploadSimDuration = 1500 + selectedFileSizeMB * (isMobile ? 15 : 8); // Duration scales with file size
+      // Use selectedFileSizeKey for scaling upload duration
+      const uploadSimDuration = 1500 + selectedFileSizeKey * (isMobile ? 0.15 : 0.08) * (actualFileSizeInBytes / (1000*1000) / 100) ; // Scale based on MBs of the key
       
       const simulateUploadProgress = (targetSpeed: number, duration: number) => {
         let simStartTime: number | null = null;
@@ -210,14 +203,14 @@ export default function Home() {
           if (!simStartTime) simStartTime = timestamp;
           const elapsed = timestamp - simStartTime;
           const progressRatio = Math.min(elapsed / duration, 1);
-          const speedFluctuation = (Math.sin((progressRatio * Math.PI) - (Math.PI / 2)) + 1) / 2; // Ease in-out type curve
-          const simulatedSpeed = targetSpeed * speedFluctuation * (0.8 + Math.random() * 0.4); // Add some jitter
+          const speedFluctuation = (Math.sin((progressRatio * Math.PI) - (Math.PI / 2)) + 1) / 2; 
+          const simulatedSpeed = targetSpeed * speedFluctuation * (0.8 + Math.random() * 0.4); 
           setCurrentSpeed(simulatedSpeed);
 
           if (progressRatio < 1) {
             uploadAnimationRef.current = requestAnimationFrame(step);
           } else {
-            setCurrentSpeed(targetSpeed); // Hold at target for a moment before finishing
+            setCurrentSpeed(targetSpeed); 
             uploadAnimationRef.current = null;
           }
         }
@@ -225,7 +218,7 @@ export default function Home() {
       };
 
       simulateUploadProgress(uploadBaseSpeed, uploadSimDuration);
-      await new Promise(resolve => setTimeout(resolve, uploadSimDuration + 200)); // Wait for simulation to roughly complete
+      await new Promise(resolve => setTimeout(resolve, uploadSimDuration + 200)); 
       if (signal.aborted) throw new Error('Test aborted');
       finalUploadSpeed = parseFloat((uploadBaseSpeed * (0.9 + Math.random() * 0.2)).toFixed(1));
       
@@ -246,7 +239,7 @@ export default function Home() {
         console.error('Error running speed test:', error);
         toast({ title: t('errorTitle'), description: error.message || t('genericError'), variant: 'destructive' });
       }
-      setCurrentStage('idle'); // Or 'error'
+      setCurrentStage('idle'); 
     } finally {
       setCurrentSpeed(0);
       setIsLoading(false);
@@ -297,7 +290,7 @@ export default function Home() {
     { labelKey: 'test10MB', size: 10 },
     { labelKey: 'test100MB', size: 100 },
     { labelKey: 'test500MB', size: 500 },
-    { labelKey: 'test1GB', size: 1024 },
+    { labelKey: 'test1GB', size: 1000 }, // Corresponds to 1000 key in fileMap (1 Billion Bytes)
   ] as const;
 
 
@@ -327,14 +320,14 @@ export default function Home() {
            <SpeedGauge
               currentSpeed={currentSpeed}
               label={getGaugeLabel()}
-              maxSpeed={isMobile ? 200 : 500} // Adjusted maxSpeed, potentially higher for non-mobile
+              maxSpeed={isMobile ? 200 : 1000} // Adjusted maxSpeed based on typical fiber speeds
               className="mb-6"
               unit={t('mbps')}
             />
          </div>
         <Button
           size="lg"
-          onClick={() => handleStartTest()}
+          onClick={() => handleStartTest()} // Uses defaultFileSizeKey
           disabled={isLoading}
           className="w-48 bg-accent text-accent-foreground hover:bg-accent/90 rounded-full shadow-lg transition-transform duration-200 active:scale-95"
         >
@@ -372,7 +365,7 @@ export default function Home() {
               <Button
                 key={item.size}
                 size="sm"
-                onClick={() => handleStartTest(item.size)}
+                onClick={() => handleStartTest(item.size)} // Passes the key (10, 100, 500, 1000)
                 disabled={isLoading}
                 className="bg-accent text-accent-foreground hover:bg-accent/90 shadow-sm"
               >
