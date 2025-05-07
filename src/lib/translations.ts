@@ -28,6 +28,14 @@ export const translations = {
     test100MB: "100 ميجابايت",
     test500MB: "500 ميجابايت",
     test1GB: "1 جيجابايت",
+    errorTitle: "خطأ",
+    downloadErrorUserFriendly: "فشل تنزيل ملف الاختبار '{fileName}'. الحالة: {status}. يرجى التأكد من وجود الملف.",
+    downloadErrorNoBody: "فشل تنزيل الملف: لم يتم العثور على محتوى للاستجابة.",
+    downloadErrorGeneric: "حدث خطأ أثناء تنزيل ملف الاختبار.",
+    uploadErrorGeneric: "حدث خطأ أثناء محاكاة اختبار الرفع.",
+    testAbortedTitle: "تم إلغاء الاختبار",
+    testAbortedDescription: "تم إيقاف اختبار السرعة.",
+    genericError: "حدث خطأ غير متوقع.",
   },
   en: {
     netGauge: "ksatest",
@@ -57,13 +65,27 @@ export const translations = {
     test100MB: "100 MB",
     test500MB: "500 MB",
     test1GB: "1 GB",
+    errorTitle: "Error",
+    downloadErrorUserFriendly: "Failed to download test file '{fileName}'. Status: {status}. Please ensure the file exists.",
+    downloadErrorNoBody: "Failed to download file: Response body is null.",
+    downloadErrorGeneric: "An error occurred while downloading the test file.",
+    uploadErrorGeneric: "An error occurred during the simulated upload test.",
+    testAbortedTitle: "Test Aborted",
+    testAbortedDescription: "The speed test was stopped.",
+    genericError: "An unexpected error occurred.",
   },
 };
 
 export type Locale = keyof typeof translations;
-export type TranslationKey = keyof typeof translations.ar; // Assuming 'ar' has all keys as a reference
+// Adjusting TranslationKey to ensure all keys from one language (e.g., 'en') are covered.
+export type TranslationKey = keyof typeof translations.en;
 
-export const getTranslation = (locale: Locale, key: TranslationKey): string => {
-  return translations[locale]?.[key] || translations.en[key] || key; // Fallback to English, then to the key itself
+export const getTranslation = (locale: Locale, key: TranslationKey, params?: Record<string, string | number>): string => {
+  let translation = translations[locale]?.[key] || translations.en[key] || key;
+  if (params) {
+    Object.keys(params).forEach(paramKey => {
+      translation = translation.replace(new RegExp(`{${paramKey}}`, 'g'), String(params[paramKey]));
+    });
+  }
+  return translation;
 };
-
