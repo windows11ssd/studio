@@ -26,7 +26,7 @@ const fileMap: Record<number, { path: string, sizeBytes: number }> = {
     500: { path: 'https://speed.cloudflare.com/__down?bytes=500000000', sizeBytes: 500 * 1000 * 1000 },
     1000: { path: 'https://speed.cloudflare.com/__down?bytes=1000000000', sizeBytes: 1000 * 1000 * 1000 },
 };
-const defaultFileSizeKey = 100;
+const defaultFileSizeKey = 10;
 
 
 export default function Home() {
@@ -448,3 +448,4 @@ export default function Home() {
     </div>
   );
 }
+
