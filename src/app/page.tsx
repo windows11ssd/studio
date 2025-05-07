@@ -61,6 +61,7 @@ export default function Home() {
         setCellInfo(info);
       } catch (error) {
         console.error('Error fetching cell info:', error);
+        // Optionally set an error state for cell info display
       } finally {
         setIsFetchingCellInfo(false);
       }
@@ -105,7 +106,7 @@ export default function Home() {
     setCurrentStage('idle');
     setCurrentSpeed(0);
     setActiveTestFileSize(null);
-    setSuggestionText(null);
+    setSuggestionText(null); // Clear suggestions on stop
     toast({ title: t('testAbortedTitle'), description: t('testAbortedDescription') });
   };
 
@@ -116,7 +117,7 @@ export default function Home() {
     setResults(null);
     setCurrentSpeed(0);
     setCurrentStage('idle');
-    setSuggestionText(null);
+    setSuggestionText(null); // Clear previous suggestions
     
     const selectedFileSizeKey = fileSizeKeyParam || defaultFileSizeKey;
     setActiveTestFileSize(selectedFileSizeKey);
@@ -138,11 +139,13 @@ export default function Home() {
     let pingResult = 0;
 
     try {
+      // Ping simulation
       setCurrentStage('ping');
-      await new Promise(resolve => setTimeout(resolve, 500)); 
+      await new Promise(resolve => setTimeout(resolve, 500)); // Simulate ping duration
       if (signal.aborted) throw new Error('Test aborted during ping');
-      pingResult = 20 + Math.random() * 30;
+      pingResult = 20 + Math.random() * 30; // Simulate ping result
 
+      // Download Test
       setCurrentStage('download');
       setCurrentSpeed(0);
       
@@ -170,7 +173,7 @@ export default function Home() {
 
         while (true) {
           if (signal.aborted) {
-            await reader.cancel(); 
+            await reader.cancel(); // Ensure reader is cancelled
             reader.releaseLock();
             throw new Error('Download aborted by user');
           }
@@ -181,15 +184,18 @@ export default function Home() {
           const now = Date.now();
           const elapsedTimeMs = now - downloadStartTime;
           
+          // Update speed more frequently for better visual feedback
           if (elapsedTimeMs > 0) {
             const currentAvgSpeed = (downloadedBytes * 8) / (elapsedTimeMs / 1000) / 1000000; // Mbps
-            if (now - lastSpeedUpdateTime > 100) { 
+            // Only update UI state periodically to avoid excessive re-renders
+            if (now - lastSpeedUpdateTime > 100) { // Update every 100ms
                 setCurrentSpeed(currentAvgSpeed);
                 lastSpeedUpdateTime = now;
             }
           }
         }
-        reader.releaseLock();
+        reader.releaseLock(); // Release the lock once done
+        // Final speed calculation upon completion
         const downloadEndTimeOnComplete = Date.now();
         const finalElapsedTimeMs = downloadEndTimeOnComplete - downloadStartTime;
         setCurrentSpeed(finalElapsedTimeMs > 0 ? (downloadedBytes * 8) / (finalElapsedTimeMs / 1000) / 1000000 : 0);
@@ -197,20 +203,23 @@ export default function Home() {
       } catch (fetchError: any) {
         if (signal.aborted || fetchError.name === 'AbortError' || fetchError.message.includes('aborted')) {
           console.log('Download aborted.');
-          throw fetchError; 
+          // Don't show error toast if aborted by user, handleStopTest will show one
+          throw fetchError; // Re-throw to be caught by outer try-catch
         }
+        // Handle actual download errors
         console.error('Download fetch error:', fetchError);
         toast({
             title: t('errorTitle'),
             description: fetchError.message || t('downloadErrorGeneric'),
             variant: 'destructive',
         });
-        finalDownloadSpeed = 0; 
+        finalDownloadSpeed = 0; // Set to 0 on error
+        // If not aborted, and error occurred, set results to reflect failure for this stage
         if (!(fetchError.name === 'AbortError' || fetchError.message.includes('aborted'))) {
              setResults({ downloadSpeedMbps: 0, uploadSpeedMbps: 0, pingMilliseconds: pingResult });
-             setCurrentStage('finished'); 
+             setCurrentStage('finished'); // Move to finished to show results, even if partial
         }
-        throw fetchError; 
+        throw fetchError; // Re-throw to be caught by outer try-catch
       }
 
       const downloadEndTime = Date.now();
@@ -219,9 +228,11 @@ export default function Home() {
 
       if (signal.aborted) throw new Error('Test aborted after download');
 
+      // Upload Test (Simulated)
       setCurrentStage('upload');
       setCurrentSpeed(0);
-      const uploadBaseSpeed = 20 + Math.random() * 30; 
+      const uploadBaseSpeed = 20 + Math.random() * 30; // Base for simulation
+      // Adjust simulation duration based on file size and device type for perceived realism
       const uploadSimDuration = 1500 + selectedFileSizeKey * (isMobile ? 0.15 : 0.08) * (actualFileSizeInBytes / (1000*1000) / 100) ; 
       
       const simulateUploadProgress = (targetSpeed: number, duration: number) => {
@@ -229,21 +240,22 @@ export default function Home() {
         
         function step(timestamp: number) {
           if (signal.aborted) {
-            setCurrentSpeed(0);
+            setCurrentSpeed(0); // Reset speed if aborted
             uploadAnimationRef.current = null;
             return;
           }
           if (!simStartTime) simStartTime = timestamp;
           const elapsed = timestamp - simStartTime;
           const progressRatio = Math.min(elapsed / duration, 1);
+          // Smoother speed fluctuation using a sine wave pattern
           const speedFluctuation = (Math.sin((progressRatio * Math.PI) - (Math.PI / 2)) + 1) / 2; 
-          const simulatedSpeed = targetSpeed * speedFluctuation * (0.8 + Math.random() * 0.4); 
+          const simulatedSpeed = targetSpeed * speedFluctuation * (0.8 + Math.random() * 0.4); // Add some randomness
           setCurrentSpeed(simulatedSpeed);
 
           if (progressRatio < 1) {
             uploadAnimationRef.current = requestAnimationFrame(step);
           } else {
-            setCurrentSpeed(targetSpeed); 
+            setCurrentSpeed(targetSpeed); // Ensure final speed is set
             uploadAnimationRef.current = null;
           }
         }
@@ -251,9 +263,9 @@ export default function Home() {
       };
 
       simulateUploadProgress(uploadBaseSpeed, uploadSimDuration);
-      await new Promise(resolve => setTimeout(resolve, uploadSimDuration + 200)); 
+      await new Promise(resolve => setTimeout(resolve, uploadSimDuration + 200)); // Wait for simulation to complete
       if (signal.aborted) throw new Error('Test aborted during upload');
-      finalUploadSpeed = parseFloat((uploadBaseSpeed * (0.9 + Math.random() * 0.2)).toFixed(1));
+      finalUploadSpeed = parseFloat((uploadBaseSpeed * (0.9 + Math.random() * 0.2)).toFixed(1)); // Final simulated upload speed
       
       const finalResultsData: SpeedTestResult = {
         downloadSpeedMbps: finalDownloadSpeed,
@@ -264,27 +276,34 @@ export default function Home() {
       setCurrentStage('finished');
 
     } catch (error: any) {
+      // Centralized error handling for aborts vs. other errors
       if (error.name === 'AbortError' || error.message.includes('aborted') || (signal && signal.aborted)) {
         console.log('Speed test was aborted.');
-        if (!isLoading) { 
+        // handleStopTest already shows a toast, so only show if not already loading (i.e., user didn't click stop)
+        if (!isLoading) { // Check if isLoading is false, which means stop button was likely not the source
              toast({ title: t('testAbortedTitle'), description: t('testAbortedDescription') });
         }
       } else {
+        // For other errors, ensure a generic error toast is shown if not handled specifically
         console.error('Error running speed test:', error);
         toast({ title: t('errorTitle'), description: error.message || t('genericError'), variant: 'destructive' });
       }
       
+      // If an error occurred and we are not in 'finished' (e.g. download failed), reset to 'idle'
       if (currentStage !== 'finished') {
         setCurrentStage('idle');
       }
     } finally {
-      setCurrentSpeed(0);
-      setIsLoading(false); 
+      // Common cleanup logic
+      setCurrentSpeed(0); // Reset speed display
+      setIsLoading(false); // Always set loading to false
+      // Only clear active test file size if the test didn't complete or was reset to idle
       if (currentStage !== 'finished' && currentStage !== 'idle') { 
         setActiveTestFileSize(null);
       }
-      abortControllerRef.current = null; 
+      abortControllerRef.current = null; // Clear the abort controller
 
+      // Ensure animation frame is cancelled
       if (uploadAnimationRef.current) {
         cancelAnimationFrame(uploadAnimationRef.current);
         uploadAnimationRef.current = null;
@@ -309,21 +328,22 @@ export default function Home() {
           const friendlyName = sizeConfig ? t(sizeConfig.labelKey) : `${activeTestFileSize}MB`;
           return t('downloadingFileSize', { size: friendlyName });
         }
-        return t('download');
+        return t('download'); // Fallback if activeTestFileSize is null
       case 'upload':
         if (activeTestFileSize) {
           const sizeConfig = fileTestSizes.find(fts => fts.size === activeTestFileSize);
           const friendlyName = sizeConfig ? t(sizeConfig.labelKey) : `${activeTestFileSize}MB`;
           return t('uploadingFileSize', { size: friendlyName });
         }
-        return t('upload');
+        return t('upload'); // Fallback
       default:
+         // If test is finished and we have results and an active file size
          if (results && activeTestFileSize) { 
             const sizeConfig = fileTestSizes.find(fts => fts.size === activeTestFileSize);
             const friendlyName = sizeConfig ? t(sizeConfig.labelKey) : `${activeTestFileSize}MB`;
             return t('speedTestFor', {size: friendlyName});
          }
-        return t('speed');
+        return t('speed'); // Default label
     }
   };
 
@@ -336,6 +356,7 @@ export default function Home() {
         </>
       );
     }
+    // If test is finished or there are results, show "Test Again"
     if (currentStage === 'finished' || results) {
         return (
             <>
@@ -344,6 +365,7 @@ export default function Home() {
             </>
         );
     }
+    // Default: Start Test
     return (
       <>
         <Play className={`h-4 w-4 ${locale === 'ar' ? 'ml-2' : 'mr-2'}`} />
@@ -365,7 +387,7 @@ export default function Home() {
         <Button
             size="icon"
             onClick={toggleLanguage}
-            className={`absolute top-0 m-2 md:m-0 ${locale === 'ar' ? 'left-0' : 'right-0'} bg-accent text-accent-foreground hover:bg-accent/90 shadow-md`}
+            className={`absolute top-0 m-2 md:m-0 ${locale === 'ar' ? 'left-0' : 'right-0'} bg-accent text-accent-foreground hover:bg-accent/90 shadow-md rounded-full p-2`}
             aria-label={locale === 'ar' ? t('toggleToEnglish') : t('toggleToArabic')}
             title={locale === 'ar' ? t('toggleToEnglish') : t('toggleToArabic')}
           >
@@ -378,19 +400,21 @@ export default function Home() {
            <SpeedGauge
               currentSpeed={currentSpeed}
               label={getGaugeLabel()}
-              maxSpeed={isMobile ? 200 : 1000}
+              maxSpeed={isMobile ? 200 : 1000} // Max speed for gauge visual
               className="mb-6"
               unit={t('mbps')}
             />
          </div>
+        {/* Main Start/Stop/Test Again Button */}
         <Button
           size="lg"
-          onClick={isLoading ? handleStopTest : () => { setActiveTestFileSize(null); handleStartTest(); }}
+          onClick={isLoading ? handleStopTest : () => { setActiveTestFileSize(null); handleStartTest(); }} // Reset activeTestFileSize for default start
           className="w-48 bg-accent text-accent-foreground hover:bg-accent/90 rounded-full shadow-lg transition-transform duration-200 active:scale-95"
         >
           {getButtonContent()}
         </Button>
 
+        {/* Result Displays */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
           <ResultDisplay
             icon={Gauge}
@@ -415,6 +439,7 @@ export default function Home() {
           />
         </div>
         
+        {/* File Size Specific Test Buttons */}
         <div className="mt-4 w-full max-w-2xl flex flex-col items-center space-y-3">
           <p className="text-sm text-muted-foreground">{t('fileSizeButtonsLabel')}</p>
           <div className="flex flex-wrap justify-center gap-2">
@@ -432,10 +457,9 @@ export default function Home() {
           </div>
         </div>
 
+        {/* Server and Cell Tower Info */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-2xl">
           <ServerInfoDisplay
-            downloadServerName={t('cloudflareNetwork')}
-            uploadServerName={t('uploadSimulatedServer')}
             className="w-full"
             locale={locale}
           />
@@ -447,7 +471,7 @@ export default function Home() {
           />
         </div>
         
-
+        {/* AI Suggestion Display */}
         <AISuggestionDisplay
             suggestion={suggestionText}
             className="w-full max-w-2xl mt-4"

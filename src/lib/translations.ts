@@ -52,10 +52,13 @@ export const translations = {
     adviceUploadFair: "سرعة الرفع لديك متوسطة. يجب أن تكون كافية للاستخدام العام، ولكن قد تحتاج إلى سرعة أعلى لرفع الملفات الكبيرة بشكل متكرر.",
     adviceAllGood: "سرعات الإنترنت لديك ممتازة! استمتع بتصفح ومشاهدة وألعاب سلسة.",
     adviceGenerallyOkay: "سرعات الإنترنت لديك جيدة بشكل عام. إذا واجهت أي مشاكل، يمكنك تجربة خطوات استكشاف الأخطاء وإصلاحها الشائعة مثل إعادة تشغيل جهاز التوجيه الخاص بك.",
-    serverInfoTitle: "معلومات الخادم",
-    serverNameLabel: "اسم الخادم",
-    serverLocationLabel: "الموقع",
-    cloudflareNetwork: "شبكة كلاودفلير",
+    serverInfoTitle: "معلومات اتصالك",
+    clientIpLabel: "عنوان IP الخاص بك",
+    ispLabel: "مزود خدمة الإنترنت",
+    orgLabel: "المنظمة",
+    locationLabel: "الموقع التقريبي",
+    errorServerInfo: "تعذر تحميل معلومات الاتصال.",
+    uploadServerInfoLabel: "خادم الرفع",
     uploadSimulatedServer: "محاكاة (لا يوجد خادم رفع محدد)",
   },
   en: {
@@ -110,10 +113,13 @@ export const translations = {
     adviceUploadFair: "Your upload speed is fair. It should be okay for general use, but could be faster for frequent large uploads.",
     adviceAllGood: "Your internet speeds look great! Enjoy smooth browsing, streaming, and gaming.",
     adviceGenerallyOkay: "Your internet speeds are generally okay. If you experience issues, you can try common troubleshooting steps like restarting your router.",
-    serverInfoTitle: "Server Information",
-    serverNameLabel: "Server Name",
-    serverLocationLabel: "Location",
-    cloudflareNetwork: "Cloudflare Network",
+    serverInfoTitle: "Your Connection Info",
+    clientIpLabel: "Your IP Address",
+    ispLabel: "ISP",
+    orgLabel: "Organization",
+    locationLabel: "Approx. Location",
+    errorServerInfo: "Could not load connection information.",
+    uploadServerInfoLabel: "Upload Server",
     uploadSimulatedServer: "Simulated (No specific upload server)",
   },
 };
@@ -130,4 +136,3 @@ export const getTranslation = (locale: Locale, key: TranslationKey, params?: Rec
   }
   return translation;
 };
-
