@@ -134,7 +134,9 @@ export default function Home() {
       try {
         const response = await fetch(fileUrl, { signal });
         if (!response.ok) {
-          throw new Error(t('downloadFailedEnsureExists'));
+          const fileName = fileUrl.substring(fileUrl.lastIndexOf('/') + 1);
+          const statusText = `${response.status} ${response.statusText || ''}`.trim();
+          throw new Error(t('downloadErrorUserFriendly', { fileName, status: statusText }));
         }
         if (!response.body) {
           throw new Error(t('downloadErrorNoBody'));
