@@ -1,8 +1,7 @@
-
 'use client';
 
 import * as React from 'react';
-import { ArrowDownToLine, ArrowUpFromLine, Gauge, Play, RotateCw, Wifi, Languages, StopCircle, Server } from 'lucide-react';
+import { ArrowDownToLine, ArrowUpFromLine, Gauge, Play, RotateCw, Wifi, Languages, StopCircle, Server, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ResultDisplay } from '@/components/result-display';
 import { CellTowerDisplay } from '@/components/cell-tower-display';
@@ -17,6 +16,15 @@ import { AISuggestionDisplay } from '@/components/ai-suggestion-display';
 import { generateClientSideSuggestions } from '@/lib/suggestions';
 import { TestServerInfoDisplay } from '@/components/test-server-info-display';
 
+// Specific type for the BeforeInstallPromptEvent
+interface BeforeInstallPromptEvent extends Event {
+  readonly platforms: Array<string>;
+  readonly userChoice: Promise<{
+    outcome: 'accepted' | 'dismissed';
+    platform: string;
+  }>;
+  prompt(): Promise<void>;
+}
 
 type TestStage = 'idle' | 'ping' | 'download' | 'upload' | 'finished';
 
@@ -47,10 +55,14 @@ export default function Home() {
   const uploadAnimationRef = React.useRef<number | null>(null);
 
   const [suggestionText, setSuggestionText] = React.useState<string | null>(null);
+  const [deferredPrompt, setDeferredPrompt] = React.useState<BeforeInstallPromptEvent | null>(null);
+  const [showInstallButton, setShowInstallButton] = React.useState<boolean>(false);
 
 
   React.useEffect(() => {
-    document.title = t('pageTitle');
+    if (typeof document !== 'undefined') {
+      document.title = t('pageTitle');
+    }
   }, [locale, t]);
 
   React.useEffect(() => {
@@ -69,6 +81,35 @@ export default function Home() {
     fetchCellInfo();
   }, []);
 
+  // Effect for PWA installation prompt
+  React.useEffect(() => {
+    const beforeInstallPromptHandler = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e as BeforeInstallPromptEvent);
+      setShowInstallButton(true);
+      console.log('`beforeinstallprompt` event was fired.');
+    };
+
+    const appInstalledHandler = () => {
+      setShowInstallButton(false);
+      setDeferredPrompt(null);
+      console.log('PWA was installed');
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('beforeinstallprompt', beforeInstallPromptHandler);
+      window.addEventListener('appinstalled', appInstalledHandler);
+    }
+
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('beforeinstallprompt', beforeInstallPromptHandler);
+        window.removeEventListener('appinstalled', appInstalledHandler);
+      }
+    };
+  }, [setDeferredPrompt, setShowInstallButton]);
+
+  // Effect for general component unmount cleanup (test-related)
   React.useEffect(() => {
     return () => {
       if (abortControllerRef.current) {
@@ -76,9 +117,11 @@ export default function Home() {
       }
       if (uploadAnimationRef.current) {
         cancelAnimationFrame(uploadAnimationRef.current);
+        uploadAnimationRef.current = null;
       }
     };
   }, []);
+
 
   React.useEffect(() => {
     if (currentStage === 'finished' && results) {
@@ -93,10 +136,34 @@ export default function Home() {
     }
   }, [currentStage, results, locale, t]);
 
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) {
+      return;
+    }
+    setShowInstallButton(false); // Hide button immediately
+    try {
+      await deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      console.log(`User response to the install prompt: ${outcome}`);
+      if (outcome === 'accepted') {
+        console.log('User accepted the A2HS prompt');
+      } else {
+        console.log('User dismissed the A2HS prompt');
+      }
+    } catch (error) {
+        console.error('Error showing install prompt:', error);
+        // If prompt failed, user might still be able to install later if event fires again
+        // or via browser menu. Re-showing button might be an option depending on desired UX.
+    } finally {
+        setDeferredPrompt(null); // We've used the prompt (or it failed), discard it.
+    }
+  };
+
 
   const handleStopTest = () => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
+      abortControllerRef.current = null; // Clear after abort
     }
     if (uploadAnimationRef.current) {
       cancelAnimationFrame(uploadAnimationRef.current);
@@ -173,7 +240,9 @@ export default function Home() {
 
         while (true) {
           if (signal.aborted) {
-            await reader.cancel(); // Ensure reader is cancelled
+            // Reader might not be cancellable if already closed or errored.
+            // Enclose in try-catch to prevent errors here from masking the abort.
+            try { await reader.cancel(); } catch (cancelError) { console.warn("Error cancelling reader:", cancelError); }
             reader.releaseLock();
             throw new Error('Download aborted by user');
           }
@@ -184,18 +253,15 @@ export default function Home() {
           const now = Date.now();
           const elapsedTimeMs = now - downloadStartTime;
           
-          // Update speed more frequently for better visual feedback
           if (elapsedTimeMs > 0) {
             const currentAvgSpeed = (downloadedBytes * 8) / (elapsedTimeMs / 1000) / 1000000; // Mbps
-            // Only update UI state periodically to avoid excessive re-renders
-            if (now - lastSpeedUpdateTime > 100) { // Update every 100ms
+            if (now - lastSpeedUpdateTime > 100) { 
                 setCurrentSpeed(currentAvgSpeed);
                 lastSpeedUpdateTime = now;
             }
           }
         }
-        reader.releaseLock(); // Release the lock once done
-        // Final speed calculation upon completion
+        reader.releaseLock(); 
         const downloadEndTimeOnComplete = Date.now();
         const finalElapsedTimeMs = downloadEndTimeOnComplete - downloadStartTime;
         setCurrentSpeed(finalElapsedTimeMs > 0 ? (downloadedBytes * 8) / (finalElapsedTimeMs / 1000) / 1000000 : 0);
@@ -203,23 +269,20 @@ export default function Home() {
       } catch (fetchError: any) {
         if (signal.aborted || fetchError.name === 'AbortError' || fetchError.message.includes('aborted')) {
           console.log('Download aborted.');
-          // Don't show error toast if aborted by user, handleStopTest will show one
-          throw fetchError; // Re-throw to be caught by outer try-catch
+          throw fetchError; 
         }
-        // Handle actual download errors
         console.error('Download fetch error:', fetchError);
         toast({
             title: t('errorTitle'),
             description: fetchError.message || t('downloadErrorGeneric'),
             variant: 'destructive',
         });
-        finalDownloadSpeed = 0; // Set to 0 on error
-        // If not aborted, and error occurred, set results to reflect failure for this stage
+        finalDownloadSpeed = 0; 
         if (!(fetchError.name === 'AbortError' || fetchError.message.includes('aborted'))) {
              setResults({ downloadSpeedMbps: 0, uploadSpeedMbps: 0, pingMilliseconds: pingResult });
-             setCurrentStage('finished'); // Move to finished to show results, even if partial
+             setCurrentStage('finished'); 
         }
-        throw fetchError; // Re-throw to be caught by outer try-catch
+        throw fetchError; 
       }
 
       const downloadEndTime = Date.now();
@@ -231,8 +294,7 @@ export default function Home() {
       // Upload Test (Simulated)
       setCurrentStage('upload');
       setCurrentSpeed(0);
-      const uploadBaseSpeed = 20 + Math.random() * 30; // Base for simulation
-      // Adjust simulation duration based on file size and device type for perceived realism
+      const uploadBaseSpeed = 20 + Math.random() * 30; 
       const uploadSimDuration = 1500 + selectedFileSizeKey * (isMobile ? 0.15 : 0.08) * (actualFileSizeInBytes / (1000*1000) / 100) ; 
       
       const simulateUploadProgress = (targetSpeed: number, duration: number) => {
@@ -240,22 +302,21 @@ export default function Home() {
         
         function step(timestamp: number) {
           if (signal.aborted) {
-            setCurrentSpeed(0); // Reset speed if aborted
+            setCurrentSpeed(0); 
             uploadAnimationRef.current = null;
             return;
           }
           if (!simStartTime) simStartTime = timestamp;
           const elapsed = timestamp - simStartTime;
           const progressRatio = Math.min(elapsed / duration, 1);
-          // Smoother speed fluctuation using a sine wave pattern
           const speedFluctuation = (Math.sin((progressRatio * Math.PI) - (Math.PI / 2)) + 1) / 2; 
-          const simulatedSpeed = targetSpeed * speedFluctuation * (0.8 + Math.random() * 0.4); // Add some randomness
+          const simulatedSpeed = targetSpeed * speedFluctuation * (0.8 + Math.random() * 0.4); 
           setCurrentSpeed(simulatedSpeed);
 
           if (progressRatio < 1) {
             uploadAnimationRef.current = requestAnimationFrame(step);
           } else {
-            setCurrentSpeed(targetSpeed); // Ensure final speed is set
+            setCurrentSpeed(targetSpeed); 
             uploadAnimationRef.current = null;
           }
         }
@@ -263,9 +324,9 @@ export default function Home() {
       };
 
       simulateUploadProgress(uploadBaseSpeed, uploadSimDuration);
-      await new Promise(resolve => setTimeout(resolve, uploadSimDuration + 200)); // Wait for simulation to complete
+      await new Promise(resolve => setTimeout(resolve, uploadSimDuration + 200)); 
       if (signal.aborted) throw new Error('Test aborted during upload');
-      finalUploadSpeed = parseFloat((uploadBaseSpeed * (0.9 + Math.random() * 0.2)).toFixed(1)); // Final simulated upload speed
+      finalUploadSpeed = parseFloat((uploadBaseSpeed * (0.9 + Math.random() * 0.2)).toFixed(1)); 
       
       const finalResultsData: SpeedTestResult = {
         downloadSpeedMbps: finalDownloadSpeed,
@@ -276,38 +337,29 @@ export default function Home() {
       setCurrentStage('finished');
 
     } catch (error: any) {
-      // Centralized error handling for aborts vs. other errors
       if (error.name === 'AbortError' || error.message.includes('aborted') || (signal && signal.aborted)) {
         console.log('Speed test was aborted.');
-        // handleStopTest already shows a toast, so only show if not already loading (i.e., user didn't click stop)
-        if (!isLoading) { // Check if isLoading is false, which means stop button was likely not the source
-             toast({ title: t('testAbortedTitle'), description: t('testAbortedDescription') });
-        }
+        // handleStopTest now shows the toast, so this check might be redundant
+        // or could be removed if handleStopTest is always called.
+        // if (!isLoading) { // Original logic
+        //      toast({ title: t('testAbortedTitle'), description: t('testAbortedDescription') });
+        // }
       } else {
-        // For other errors, ensure a generic error toast is shown if not handled specifically
         console.error('Error running speed test:', error);
         toast({ title: t('errorTitle'), description: error.message || t('genericError'), variant: 'destructive' });
       }
       
-      // If an error occurred and we are not in 'finished' (e.g. download failed), reset to 'idle'
       if (currentStage !== 'finished') {
-        setCurrentStage('idle');
+        setCurrentStage('idle'); // Reset to idle if not already finished (e.g. error during download)
       }
     } finally {
-      // Common cleanup logic
-      setCurrentSpeed(0); // Reset speed display
-      setIsLoading(false); // Always set loading to false
-      // Only clear active test file size if the test didn't complete or was reset to idle
-      if (currentStage !== 'finished' && currentStage !== 'idle') { 
+      setCurrentSpeed(0); 
+      setIsLoading(false); 
+      if (currentStage !== 'finished') { 
         setActiveTestFileSize(null);
       }
-      abortControllerRef.current = null; // Clear the abort controller
-
-      // Ensure animation frame is cancelled
-      if (uploadAnimationRef.current) {
-        cancelAnimationFrame(uploadAnimationRef.current);
-        uploadAnimationRef.current = null;
-      }
+      // abortControllerRef is cleared in handleStopTest or when new test starts
+      // uploadAnimationRef is cleared in handleStopTest or when simulation ends/aborts
     }
   };
   
@@ -328,22 +380,21 @@ export default function Home() {
           const friendlyName = sizeConfig ? t(sizeConfig.labelKey) : `${activeTestFileSize}MB`;
           return t('downloadingFileSize', { size: friendlyName });
         }
-        return t('download'); // Fallback if activeTestFileSize is null
+        return t('download'); 
       case 'upload':
         if (activeTestFileSize) {
           const sizeConfig = fileTestSizes.find(fts => fts.size === activeTestFileSize);
           const friendlyName = sizeConfig ? t(sizeConfig.labelKey) : `${activeTestFileSize}MB`;
           return t('uploadingFileSize', { size: friendlyName });
         }
-        return t('upload'); // Fallback
+        return t('upload'); 
       default:
-         // If test is finished and we have results and an active file size
          if (results && activeTestFileSize) { 
             const sizeConfig = fileTestSizes.find(fts => fts.size === activeTestFileSize);
             const friendlyName = sizeConfig ? t(sizeConfig.labelKey) : `${activeTestFileSize}MB`;
             return t('speedTestFor', {size: friendlyName});
          }
-        return t('speed'); // Default label
+        return t('speed'); 
     }
   };
 
@@ -356,7 +407,6 @@ export default function Home() {
         </>
       );
     }
-    // If test is finished or there are results, show "Test Again"
     if (currentStage === 'finished' || results) {
         return (
             <>
@@ -365,7 +415,6 @@ export default function Home() {
             </>
         );
     }
-    // Default: Start Test
     return (
       <>
         <Play className={`h-4 w-4 ${locale === 'ar' ? 'ml-2' : 'mr-2'}`} />
@@ -383,16 +432,27 @@ export default function Home() {
             <Wifi className="h-8 w-8 text-accent" /> {t('netGauge')}
             </h1>
         </div>
-        <p className="text-muted-foreground">{t('measureSpeed')}</p>
         <Button
             size="icon"
             onClick={toggleLanguage}
-            className={`absolute top-0 m-2 md:m-0 ${locale === 'ar' ? 'left-0' : 'right-0'} bg-accent text-accent-foreground hover:bg-accent/90 shadow-md rounded-full p-2`}
+            className={`absolute top-1 ${locale === 'ar' ? 'left-1 md:left-2' : 'right-1 md:right-2'} bg-green-500 hover:bg-green-600 text-white shadow-md rounded-full p-2 transition-all duration-200 ease-in-out transform hover:scale-110 focus:ring-2 focus:ring-green-400 focus:ring-offset-2`}
             aria-label={locale === 'ar' ? t('toggleToEnglish') : t('toggleToArabic')}
             title={locale === 'ar' ? t('toggleToEnglish') : t('toggleToArabic')}
           >
             <Languages className="h-5 w-5" />
         </Button>
+        {showInstallButton && (
+          <Button
+            onClick={handleInstallClick}
+            className={`absolute top-1 ${locale === 'ar' ? 'right-1 md:right-2' : 'left-1 md:left-2'} bg-primary hover:bg-primary/90 text-primary-foreground shadow-md rounded-lg px-3 py-2 flex items-center gap-1 text-sm font-medium transition-all duration-200 ease-in-out transform hover:scale-105 focus:ring-2 focus:ring-ring focus:ring-offset-2`}
+            aria-label={t('installApp')}
+            title={t('installApp')}
+          >
+            <Download className="h-4 w-4" />
+            <span className="hidden sm:inline">{t('installApp')}</span>
+          </Button>
+        )}
+        <p className={`text-muted-foreground ${showInstallButton ? 'mt-12 md:mt-14' : 'mt-4'}`}>{t('measureSpeed')}</p>
       </header>
 
       <main className="flex w-full max-w-2xl flex-col items-center space-y-8">
@@ -400,21 +460,19 @@ export default function Home() {
            <SpeedGauge
               currentSpeed={currentSpeed}
               label={getGaugeLabel()}
-              maxSpeed={isMobile ? 200 : 1000} // Max speed for gauge visual
+              maxSpeed={isMobile ? 200 : 1000} 
               className="mb-6"
               unit={t('mbps')}
             />
          </div>
-        {/* Main Start/Stop/Test Again Button */}
         <Button
           size="lg"
-          onClick={isLoading ? handleStopTest : () => { setActiveTestFileSize(null); handleStartTest(); }} // Reset activeTestFileSize for default start
+          onClick={isLoading ? handleStopTest : () => { setActiveTestFileSize(null); handleStartTest(); }} 
           className="w-48 bg-accent text-accent-foreground hover:bg-accent/90 rounded-full shadow-lg transition-transform duration-200 active:scale-95"
         >
           {getButtonContent()}
         </Button>
 
-        {/* Result Displays */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
           <ResultDisplay
             icon={Gauge}
@@ -439,7 +497,6 @@ export default function Home() {
           />
         </div>
         
-        {/* File Size Specific Test Buttons */}
         <div className="mt-4 w-full max-w-2xl flex flex-col items-center space-y-3">
           <p className="text-sm text-muted-foreground">{t('fileSizeButtonsLabel')}</p>
           <div className="flex flex-wrap justify-center gap-2">
@@ -457,7 +514,6 @@ export default function Home() {
           </div>
         </div>
         
-        {/* Test Server Info */}
         <div className="w-full max-w-2xl">
             <TestServerInfoDisplay
                 downloadServer={t('cloudflareNetworkName')}
@@ -467,7 +523,6 @@ export default function Home() {
             />
         </div>
 
-        {/* Cell Tower Info */}
         <div className="w-full max-w-2xl">
           <CellTowerDisplay
             cellInfo={cellInfo}
@@ -477,7 +532,6 @@ export default function Home() {
           />
         </div>
         
-        {/* AI Suggestion Display */}
         <AISuggestionDisplay
             suggestion={suggestionText}
             className="w-full max-w-2xl mt-4"

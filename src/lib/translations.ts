@@ -64,6 +64,8 @@ export const translations = {
     downloadServerLabel: "خادم التنزيل",
     cloudflareNetworkName: "شبكة كلاودفلير",
     simulatedServerName: "خادم محاكاة",
+    installApp: "تثبيت التطبيق",
+    installPrompt: "هل ترغب في تثبيت هذا التطبيق على جهازك للوصول إليه بسهولة؟",
   },
   en: {
     netGauge: "ksatest",
@@ -129,6 +131,8 @@ export const translations = {
     downloadServerLabel: "Download Server",
     cloudflareNetworkName: "Cloudflare Network",
     simulatedServerName: "Simulated Server",
+    installApp: "Install App",
+    installPrompt: "Would you like to install this app on your device for easy access?",
   },
 };
 
