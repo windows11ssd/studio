@@ -136,3 +136,4 @@ export const getTranslation = (locale: Locale, key: TranslationKey, params?: Rec
   }
   return translation;
 };
+
