@@ -41,11 +41,17 @@ export const translations = {
     downloadingFileSize: "جاري تنزيل {size}",
     uploadingFileSize: "جاري رفع {size}",
     speedTestFor: "اختبار السرعة لـ {size}",
-    aiSuggestionsTitle: "اقتراحات الذكاء الاصطناعي",
-    generatingSuggestions: "جاري إنشاء الاقتراحات...",
-    aiSuggestionError: "عذرًا، لم نتمكن من إنشاء اقتراحات في الوقت الحالي.",
-    noSuggestionsYet: "ستظهر اقتراحات الذكاء الاصطناعي هنا بعد إكمال اختبار السرعة.",
-    aiQuotaError: "لقد تجاوزت حد الاستخدام المجاني لواجهة برمجة تطبيقات الذكاء الاصطناعي. يرجى المحاولة مرة أخرى لاحقًا أو التحقق من خطتك.",
+    aiSuggestionsTitle: "نصائح مفيدة", // Renamed for neutrality, or keep as "AI Suggestions" if preferred for user familiarity
+    noSuggestionsYet: "ستظهر الاقتراحات هنا بعد إكمال اختبار السرعة.",
+    suggestionGenerationError: "عذرًا، لم نتمكن من إنشاء اقتراحات في الوقت الحالي.",
+    advicePingPoor: "البينج لديك مرتفع جدًا. حاول الاقتراب من جهاز التوجيه (الراوتر) الخاص بك، أو استخدم كابل إيثرنت، أو تحقق من وجود ازدحام في الشبكة أو عدد كبير جدًا من الأجهزة المتصلة.",
+    advicePingFair: "البينج لديك مرتفع قليلاً. للألعاب أو التطبيقات التي تتطلب استجابة فورية، يفضل أن يكون البينج أقل. ضع في الاعتبار الاقتراب من جهاز التوجيه.",
+    adviceDownloadPoor: "سرعة التنزيل لديك منخفضة. قد يؤثر هذا على تصفح الإنترنت ومشاهدة الفيديوهات. حاول إعادة تشغيل المودم وجهاز التوجيه، أو تحقق من باقة الإنترنت الخاصة بك.",
+    adviceDownloadFair: "سرعة التنزيل لديك متوسطة. يجب أن تكون كافية لمعظم الأنشطة، ولكن قد تحتاج إلى سرعة أعلى للملفات الكبيرة أو مشاهدة الفيديوهات بدقة 4K.",
+    adviceUploadPoor: "سرعة الرفع لديك منخفضة. قد يؤثر هذا على مكالمات الفيديو أو إرسال الملفات الكبيرة. حاول إعادة تشغيل المودم وجهاز التوجيه.",
+    adviceUploadFair: "سرعة الرفع لديك متوسطة. يجب أن تكون كافية للاستخدام العام، ولكن قد تحتاج إلى سرعة أعلى لرفع الملفات الكبيرة بشكل متكرر.",
+    adviceAllGood: "سرعات الإنترنت لديك ممتازة! استمتع بتصفح ومشاهدة وألعاب سلسة.",
+    adviceGenerallyOkay: "سرعات الإنترنت لديك جيدة بشكل عام. إذا واجهت أي مشاكل، يمكنك تجربة خطوات استكشاف الأخطاء وإصلاحها الشائعة مثل إعادة تشغيل جهاز التوجيه الخاص بك.",
   },
   en: {
     netGauge: "ksatest",
@@ -88,17 +94,22 @@ export const translations = {
     downloadingFileSize: "Downloading {size}",
     uploadingFileSize: "Uploading {size}",
     speedTestFor: "Speed Test for {size}",
-    aiSuggestionsTitle: "AI Suggestions",
-    generatingSuggestions: "Generating suggestions...",
-    aiSuggestionError: "Sorry, we couldn't generate suggestions at this time.",
-    noSuggestionsYet: "AI suggestions will appear here after you complete a speed test.",
-    aiQuotaError: "You have exceeded the free tier API quota. Please try again later or check your plan.",
+    aiSuggestionsTitle: "Helpful Tips", // Renamed for neutrality
+    noSuggestionsYet: "Suggestions will appear here after you complete a speed test.",
+    suggestionGenerationError: "Sorry, we couldn't generate suggestions at this time.",
+    advicePingPoor: "Your ping is quite high. Try moving closer to your Wi-Fi router, using an Ethernet cable, checking for network congestion, or reducing the number of connected devices.",
+    advicePingFair: "Your ping is a bit high. For gaming or real-time applications, a lower ping is better. Consider moving closer to your router.",
+    adviceDownloadPoor: "Your download speed is low. This might affect streaming and browsing. Try restarting your modem/router or checking your ISP plan.",
+    adviceDownloadFair: "Your download speed is fair. It should be okay for most activities, but could be faster for large downloads or 4K streaming.",
+    adviceUploadPoor: "Your upload speed is low. This might affect video calls or sending large files. Try restarting your modem/router.",
+    adviceUploadFair: "Your upload speed is fair. It should be okay for general use, but could be faster for frequent large uploads.",
+    adviceAllGood: "Your internet speeds look great! Enjoy smooth browsing, streaming, and gaming.",
+    adviceGenerallyOkay: "Your internet speeds are generally okay. If you experience issues, you can try common troubleshooting steps like restarting your router.",
   },
 };
 
 export type Locale = keyof typeof translations;
-// Adjusting TranslationKey to ensure all keys from one language (e.g., 'en') are covered.
-export type TranslationKey = keyof typeof translations.en;
+export type TranslationKey = keyof typeof translations.en; // All keys must exist in 'en'
 
 export const getTranslation = (locale: Locale, key: TranslationKey, params?: Record<string, string | number>): string => {
   let translation = translations[locale]?.[key] || translations.en[key] || key;
@@ -109,4 +120,3 @@ export const getTranslation = (locale: Locale, key: TranslationKey, params?: Rec
   }
   return translation;
 };
-

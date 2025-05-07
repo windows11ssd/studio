@@ -13,22 +13,20 @@ import { useLanguage } from '@/contexts/language-context';
 import { getTranslation, type TranslationKey } from '@/lib/translations';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { diagnoseInternetSpeed } from '@/ai/flows/speed-test-advisor-flow';
 import { AISuggestionDisplay } from '@/components/ai-suggestion-display';
+import { generateClientSideSuggestions } from '@/lib/suggestions';
 
 
 type TestStage = 'idle' | 'ping' | 'download' | 'upload' | 'finished';
 
 // Using Cloudflare's speed test files.
-// The 'size' property in fileMap keys and fileTestSizes corresponds to the nominal size in MB for user display.
-// The 'sizeBytes' property in fileMap is the actual number of bytes served by Cloudflare for that file.
 const fileMap: Record<number, { path: string, sizeBytes: number }> = {
-    10: { path: 'https://speed.cloudflare.com/__down?bytes=10000000', sizeBytes: 10 * 1000 * 1000 },    // 10 Million Bytes
-    100: { path: 'https://speed.cloudflare.com/__down?bytes=100000000', sizeBytes: 100 * 1000 * 1000 }, // 100 Million Bytes
-    500: { path: 'https://speed.cloudflare.com/__down?bytes=500000000', sizeBytes: 500 * 1000 * 1000 }, // 500 Million Bytes
-    1000: { path: 'https://speed.cloudflare.com/__down?bytes=1000000000', sizeBytes: 1000 * 1000 * 1000 },// 1 Billion Bytes (referred to as 1GB)
+    10: { path: 'https://speed.cloudflare.com/__down?bytes=10000000', sizeBytes: 10 * 1000 * 1000 },
+    100: { path: 'https://speed.cloudflare.com/__down?bytes=100000000', sizeBytes: 100 * 1000 * 1000 },
+    500: { path: 'https://speed.cloudflare.com/__down?bytes=500000000', sizeBytes: 500 * 1000 * 1000 },
+    1000: { path: 'https://speed.cloudflare.com/__down?bytes=1000000000', sizeBytes: 1000 * 1000 * 1000 },
 };
-const defaultFileSizeKey = 100; // Default test file key (corresponds to 100MB file)
+const defaultFileSizeKey = 100;
 
 
 export default function Home() {
@@ -47,9 +45,7 @@ export default function Home() {
   const abortControllerRef = React.useRef<AbortController | null>(null);
   const uploadAnimationRef = React.useRef<number | null>(null);
 
-  const [aiSuggestion, setAiSuggestion] = React.useState<string | null>(null);
-  const [isGeneratingSuggestion, setIsGeneratingSuggestion] = React.useState<boolean>(false);
-  const [aiSuggestionError, setAiSuggestionError] = React.useState<string | null>(null);
+  const [suggestionText, setSuggestionText] = React.useState<string | null>(null);
 
 
   React.useEffect(() => {
@@ -72,7 +68,6 @@ export default function Home() {
   }, []);
 
   React.useEffect(() => {
-    // Cleanup abort controller and upload animation on component unmount
     return () => {
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
@@ -85,32 +80,16 @@ export default function Home() {
 
   React.useEffect(() => {
     if (currentStage === 'finished' && results) {
-      const fetchAiSuggestion = async () => {
-        setIsGeneratingSuggestion(true);
-        setAiSuggestion(null);
-        setAiSuggestionError(null);
-        try {
-          const suggestionOutput = await diagnoseInternetSpeed({
-            downloadSpeedMbps: results.downloadSpeedMbps,
-            uploadSpeedMbps: results.uploadSpeedMbps,
-            pingMilliseconds: results.pingMilliseconds,
-          });
-          setAiSuggestion(suggestionOutput.advice);
-        } catch (error: any) {
-          console.error("Error fetching AI suggestion:", error);
-          let errorMessage = t('aiSuggestionError'); // Default error
-          if (error && error.message && (error.message.includes('429') || error.message.toLowerCase().includes('quota'))) {
-            errorMessage = t('aiQuotaError'); 
-          }
-          setAiSuggestionError(errorMessage);
-          setAiSuggestion(null);
-        } finally {
-          setIsGeneratingSuggestion(false);
-        }
-      };
-      fetchAiSuggestion();
+      setSuggestionText(null); 
+      try {
+        const advice = generateClientSideSuggestions({ results, locale });
+        setSuggestionText(advice);
+      } catch (error: any) {
+        console.error("Error generating client-side suggestions:", error);
+        setSuggestionText(t('suggestionGenerationError'));
+      }
     }
-  }, [currentStage, results, t]);
+  }, [currentStage, results, locale, t]);
 
 
   const handleStopTest = () => {
@@ -125,9 +104,7 @@ export default function Home() {
     setCurrentStage('idle');
     setCurrentSpeed(0);
     setActiveTestFileSize(null);
-    setAiSuggestion(null);
-    setIsGeneratingSuggestion(false);
-    setAiSuggestionError(null);
+    setSuggestionText(null);
     toast({ title: t('testAbortedTitle'), description: t('testAbortedDescription') });
   };
 
@@ -138,9 +115,7 @@ export default function Home() {
     setResults(null);
     setCurrentSpeed(0);
     setCurrentStage('idle');
-    setAiSuggestion(null);
-    setIsGeneratingSuggestion(false);
-    setAiSuggestionError(null);
+    setSuggestionText(null);
     
     const selectedFileSizeKey = fileSizeKeyParam || defaultFileSizeKey;
     setActiveTestFileSize(selectedFileSizeKey);
@@ -157,19 +132,16 @@ export default function Home() {
       uploadAnimationRef.current = null;
     }
     
-
     let finalDownloadSpeed = 0;
     let finalUploadSpeed = 0;
     let pingResult = 0;
 
     try {
-      // --- PING ---
       setCurrentStage('ping');
       await new Promise(resolve => setTimeout(resolve, 500)); 
       if (signal.aborted) throw new Error('Test aborted during ping');
       pingResult = 20 + Math.random() * 30;
 
-      // --- DOWNLOAD ---
       setCurrentStage('download');
       setCurrentSpeed(0);
       
@@ -246,10 +218,9 @@ export default function Home() {
 
       if (signal.aborted) throw new Error('Test aborted after download');
 
-      // --- UPLOAD (Simulated) ---
       setCurrentStage('upload');
       setCurrentSpeed(0);
-      const uploadBaseSpeed = 20 + Math.random() * 30; // Mbps
+      const uploadBaseSpeed = 20 + Math.random() * 30; 
       const uploadSimDuration = 1500 + selectedFileSizeKey * (isMobile ? 0.15 : 0.08) * (actualFileSizeInBytes / (1000*1000) / 100) ; 
       
       const simulateUploadProgress = (targetSpeed: number, duration: number) => {
@@ -283,7 +254,6 @@ export default function Home() {
       if (signal.aborted) throw new Error('Test aborted during upload');
       finalUploadSpeed = parseFloat((uploadBaseSpeed * (0.9 + Math.random() * 0.2)).toFixed(1));
       
-      // --- FINISHED ---
       const finalResultsData: SpeedTestResult = {
         downloadSpeedMbps: finalDownloadSpeed,
         uploadSpeedMbps: finalUploadSpeed,
@@ -311,8 +281,6 @@ export default function Home() {
       setIsLoading(false); 
       if (currentStage !== 'finished' && currentStage !== 'idle') { 
         setActiveTestFileSize(null);
-      } else if (currentStage === 'finished') {
-        // AI suggestion will be triggered by useEffect
       }
       abortControllerRef.current = null; 
 
@@ -472,9 +440,7 @@ export default function Home() {
          />
 
         <AISuggestionDisplay
-            suggestion={aiSuggestion}
-            isLoading={isGeneratingSuggestion}
-            error={aiSuggestionError}
+            suggestion={suggestionText}
             className="w-full max-w-2xl mt-4"
             locale={locale}
         />
@@ -482,4 +448,3 @@ export default function Home() {
     </div>
   );
 }
-
