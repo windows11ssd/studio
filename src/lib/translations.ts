@@ -4,6 +4,7 @@ export const translations = {
     netGauge: "ksatest",
     measureSpeed: "قم بقياس سرعة اتصالك بالإنترنت.",
     startTest: "ابدأ الاختبار",
+    stopTest: "إيقاف الاختبار",
     testingInProgress: "جاري الاختبار...",
     testAgain: "اختبار مرة أخرى",
     ping: "البينج",
@@ -42,6 +43,7 @@ export const translations = {
     netGauge: "ksatest",
     measureSpeed: "Measure your internet connection speed.",
     startTest: "Start Test",
+    stopTest: "Stop Test",
     testingInProgress: "Testing...",
     testAgain: "Test Again",
     ping: "Ping",
@@ -91,3 +93,4 @@ export const getTranslation = (locale: Locale, key: TranslationKey, params?: Rec
   }
   return translation;
 };
+

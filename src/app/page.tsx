@@ -2,7 +2,7 @@
 'use client';
 
 import * as React from 'react';
-import { ArrowDownToLine, ArrowUpFromLine, Gauge, Play, RotateCw, Wifi, Languages } from 'lucide-react';
+import { ArrowDownToLine, ArrowUpFromLine, Gauge, Play, RotateCw, Wifi, Languages, StopCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ResultDisplay } from '@/components/result-display';
 import { CellTowerDisplay } from '@/components/cell-tower-display';
@@ -75,15 +75,31 @@ export default function Home() {
     };
   }, []);
 
+  const handleStopTest = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      // The ref will be set to null in the finally block of handleStartTest
+    }
+    if (uploadAnimationRef.current) {
+      cancelAnimationFrame(uploadAnimationRef.current);
+      uploadAnimationRef.current = null;
+    }
+    setIsLoading(false);
+    setCurrentStage('idle');
+    setCurrentSpeed(0);
+    // setResults(null); // Optionally clear results if a test is stopped midway
+    toast({ title: t('testAbortedTitle'), description: t('testAbortedDescription') });
+  };
+
   const handleStartTest = async (fileSizeKeyParam?: number) => {
-    if (isLoading) return;
+    if (isLoading) return; // Should not happen if stop button is wired correctly
 
     setIsLoading(true);
     setResults(null);
     setCurrentSpeed(0);
     setCurrentStage('idle');
 
-    if (abortControllerRef.current) {
+    if (abortControllerRef.current) { // Should be null here, but as a safeguard
       abortControllerRef.current.abort();
     }
     abortControllerRef.current = new AbortController();
@@ -106,7 +122,7 @@ export default function Home() {
       // --- PING ---
       setCurrentStage('ping');
       await new Promise(resolve => setTimeout(resolve, 500)); // Simulate ping
-      if (signal.aborted) throw new Error('Test aborted');
+      if (signal.aborted) throw new Error('Test aborted during ping');
       pingResult = 20 + Math.random() * 30;
 
       // --- DOWNLOAD ---
@@ -125,7 +141,7 @@ export default function Home() {
       let lastSpeedUpdateTime = downloadStartTime;
 
       try {
-        const response = await fetch(fileUrl, { signal, cache: 'no-store' }); // Add cache: 'no-store'
+        const response = await fetch(fileUrl, { signal, cache: 'no-store' });
         if (!response.ok) {
           const statusText = `${response.status} ${response.statusText || ''}`.trim();
           throw new Error(t('downloadErrorUserFriendly', { fileName: userFriendlyFileNameForError, status: statusText }));
@@ -137,7 +153,8 @@ export default function Home() {
 
         while (true) {
           if (signal.aborted) {
-            reader.cancel(); 
+            await reader.cancel(); // Ensure reader is cancelled
+            reader.releaseLock();
             throw new Error('Download aborted by user');
           }
           const { done, value } = await reader.read();
@@ -161,7 +178,7 @@ export default function Home() {
         setCurrentSpeed(finalElapsedTimeMs > 0 ? (downloadedBytes * 8) / (finalElapsedTimeMs / 1000) / 1000000 : 0);
 
       } catch (fetchError: any) {
-        if (fetchError.name === 'AbortError' || fetchError.message.includes('aborted')) {
+        if (signal.aborted || fetchError.name === 'AbortError' || fetchError.message.includes('aborted')) {
           console.log('Download aborted.');
           throw fetchError; 
         }
@@ -172,24 +189,26 @@ export default function Home() {
             variant: 'destructive',
         });
         finalDownloadSpeed = 0; 
-        setCurrentStage('finished'); 
-        setIsLoading(false);
-        setCurrentSpeed(0);
-        return;
+        // Do not set stage/loading here, finally block will handle it.
+        // Only rethrow if it's not an abort error that we are already handling.
+        if (!(fetchError.name === 'AbortError' || fetchError.message.includes('aborted'))) {
+             setResults({ downloadSpeedMbps: 0, uploadSpeedMbps: 0, pingMilliseconds: pingResult });
+             setCurrentStage('finished'); // Mark as finished even if download failed partially
+        }
+        throw fetchError; // Rethrow to be caught by outer try-catch
       }
 
       const downloadEndTime = Date.now();
       const downloadDurationSeconds = (downloadEndTime - downloadStartTime) / 1000;
       finalDownloadSpeed = downloadDurationSeconds > 0 ? parseFloat(((actualFileSizeInBytes * 8) / (downloadDurationSeconds * 1000000)).toFixed(1)) : 0;
 
-      if (signal.aborted) throw new Error('Test aborted');
+      if (signal.aborted) throw new Error('Test aborted after download');
 
       // --- UPLOAD (Simulated) ---
       setCurrentStage('upload');
       setCurrentSpeed(0);
       const uploadBaseSpeed = 20 + Math.random() * 30; // Mbps
-      // Use selectedFileSizeKey for scaling upload duration
-      const uploadSimDuration = 1500 + selectedFileSizeKey * (isMobile ? 0.15 : 0.08) * (actualFileSizeInBytes / (1000*1000) / 100) ; // Scale based on MBs of the key
+      const uploadSimDuration = 1500 + selectedFileSizeKey * (isMobile ? 0.15 : 0.08) * (actualFileSizeInBytes / (1000*1000) / 100) ; 
       
       const simulateUploadProgress = (targetSpeed: number, duration: number) => {
         let simStartTime: number | null = null;
@@ -219,7 +238,7 @@ export default function Home() {
 
       simulateUploadProgress(uploadBaseSpeed, uploadSimDuration);
       await new Promise(resolve => setTimeout(resolve, uploadSimDuration + 200)); 
-      if (signal.aborted) throw new Error('Test aborted');
+      if (signal.aborted) throw new Error('Test aborted during upload');
       finalUploadSpeed = parseFloat((uploadBaseSpeed * (0.9 + Math.random() * 0.2)).toFixed(1));
       
       // --- FINISHED ---
@@ -232,18 +251,29 @@ export default function Home() {
       setCurrentStage('finished');
 
     } catch (error: any) {
-      if (error.name === 'AbortError' || error.message.includes('aborted')) {
+      if (error.name === 'AbortError' || error.message.includes('aborted') || (signal && signal.aborted)) {
         console.log('Speed test was aborted.');
-        toast({ title: t('testAbortedTitle'), description: t('testAbortedDescription') });
+        // Toast is handled by handleStopTest or if aborted not by explicit stop, it's logged.
+        if (!isLoading) { // If not already stopped by handleStopTest
+             toast({ title: t('testAbortedTitle'), description: t('testAbortedDescription') });
+        }
       } else {
         console.error('Error running speed test:', error);
         toast({ title: t('errorTitle'), description: error.message || t('genericError'), variant: 'destructive' });
       }
-      setCurrentStage('idle'); 
+      // Reset to idle only if an error occurred that wasn't a planned finish
+      if (currentStage !== 'finished') {
+        setCurrentStage('idle');
+      }
     } finally {
       setCurrentSpeed(0);
-      setIsLoading(false);
-      abortControllerRef.current = null;
+      setIsLoading(false); // This ensures loading is false even if an error occurs or test is stopped
+      if (abortControllerRef.current && !abortControllerRef.current.signal.aborted) {
+         // If not aborted by user, but finished or errored, ensure controller is nullified.
+         // If aborted by user, handleStopTest (or the signal itself) would have handled it.
+      }
+      abortControllerRef.current = null; // Always clear ref here
+
       if (uploadAnimationRef.current) {
         cancelAnimationFrame(uploadAnimationRef.current);
         uploadAnimationRef.current = null;
@@ -265,8 +295,8 @@ export default function Home() {
     if (isLoading) {
       return (
         <>
-          <RotateCw className={`h-4 w-4 animate-spin ${locale === 'ar' ? 'ml-2' : 'mr-2'}`} />
-          {t('testingInProgress')}
+          <StopCircle className={`h-4 w-4 ${locale === 'ar' ? 'ml-2' : 'mr-2'}`} />
+          {t('stopTest')}
         </>
       );
     }
@@ -290,7 +320,7 @@ export default function Home() {
     { labelKey: 'test10MB', size: 10 },
     { labelKey: 'test100MB', size: 100 },
     { labelKey: 'test500MB', size: 500 },
-    { labelKey: 'test1GB', size: 1000 }, // Corresponds to 1000 key in fileMap (1 Billion Bytes)
+    { labelKey: 'test1GB', size: 1000 },
   ] as const;
 
 
@@ -320,15 +350,14 @@ export default function Home() {
            <SpeedGauge
               currentSpeed={currentSpeed}
               label={getGaugeLabel()}
-              maxSpeed={isMobile ? 200 : 1000} // Adjusted maxSpeed based on typical fiber speeds
+              maxSpeed={isMobile ? 200 : 1000}
               className="mb-6"
               unit={t('mbps')}
             />
          </div>
         <Button
           size="lg"
-          onClick={() => handleStartTest()} // Uses defaultFileSizeKey
-          disabled={isLoading}
+          onClick={isLoading ? handleStopTest : () => handleStartTest()}
           className="w-48 bg-accent text-accent-foreground hover:bg-accent/90 rounded-full shadow-lg transition-transform duration-200 active:scale-95"
         >
           {getButtonContent()}
@@ -365,7 +394,7 @@ export default function Home() {
               <Button
                 key={item.size}
                 size="sm"
-                onClick={() => handleStartTest(item.size)} // Passes the key (10, 100, 500, 1000)
+                onClick={() => handleStartTest(item.size)}
                 disabled={isLoading}
                 className="bg-accent text-accent-foreground hover:bg-accent/90 shadow-sm"
               >
