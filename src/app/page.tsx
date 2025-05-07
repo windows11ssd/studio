@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -12,6 +13,9 @@ import { useLanguage } from '@/contexts/language-context';
 import { getTranslation, type TranslationKey } from '@/lib/translations';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { diagnoseInternetSpeed } from '@/ai/flows/speed-test-advisor-flow';
+import { AISuggestionDisplay } from '@/components/ai-suggestion-display';
+
 
 type TestStage = 'idle' | 'ping' | 'download' | 'upload' | 'finished';
 
@@ -42,6 +46,10 @@ export default function Home() {
   const [activeTestFileSize, setActiveTestFileSize] = React.useState<number | null>(null);
   const abortControllerRef = React.useRef<AbortController | null>(null);
   const uploadAnimationRef = React.useRef<number | null>(null);
+
+  const [aiSuggestion, setAiSuggestion] = React.useState<string | null>(null);
+  const [isGeneratingSuggestion, setIsGeneratingSuggestion] = React.useState<boolean>(false);
+  const [aiSuggestionError, setAiSuggestionError] = React.useState<string | null>(null);
 
 
   React.useEffect(() => {
@@ -75,10 +83,36 @@ export default function Home() {
     };
   }, []);
 
+  React.useEffect(() => {
+    if (currentStage === 'finished' && results) {
+      const fetchAiSuggestion = async () => {
+        setIsGeneratingSuggestion(true);
+        setAiSuggestion(null);
+        setAiSuggestionError(null);
+        try {
+          const suggestionOutput = await diagnoseInternetSpeed({
+            downloadSpeedMbps: results.downloadSpeedMbps,
+            uploadSpeedMbps: results.uploadSpeedMbps,
+            pingMilliseconds: results.pingMilliseconds,
+          });
+          setAiSuggestion(suggestionOutput.advice);
+        } catch (error) {
+          console.error("Error fetching AI suggestion:", error);
+          // Do not use toast here as AISuggestionDisplay will show the error.
+          setAiSuggestionError(t('aiSuggestionError'));
+          setAiSuggestion(null);
+        } finally {
+          setIsGeneratingSuggestion(false);
+        }
+      };
+      fetchAiSuggestion();
+    }
+  }, [currentStage, results, t]);
+
+
   const handleStopTest = () => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
-      // The ref will be set to null in the finally block of handleStartTest
     }
     if (uploadAnimationRef.current) {
       cancelAnimationFrame(uploadAnimationRef.current);
@@ -88,23 +122,28 @@ export default function Home() {
     setCurrentStage('idle');
     setCurrentSpeed(0);
     setActiveTestFileSize(null);
-    // setResults(null); // Optionally clear results if a test is stopped midway
+    setAiSuggestion(null);
+    setIsGeneratingSuggestion(false);
+    setAiSuggestionError(null);
     toast({ title: t('testAbortedTitle'), description: t('testAbortedDescription') });
   };
 
   const handleStartTest = async (fileSizeKeyParam?: number) => {
-    if (isLoading) return; // Should not happen if stop button is wired correctly
+    if (isLoading) return; 
 
     setIsLoading(true);
     setResults(null);
     setCurrentSpeed(0);
     setCurrentStage('idle');
+    setAiSuggestion(null);
+    setIsGeneratingSuggestion(false);
+    setAiSuggestionError(null);
     
     const selectedFileSizeKey = fileSizeKeyParam || defaultFileSizeKey;
     setActiveTestFileSize(selectedFileSizeKey);
     console.log(`Starting test with file size key: ${selectedFileSizeKey}`);
 
-    if (abortControllerRef.current) { // Should be null here, but as a safeguard
+    if (abortControllerRef.current) { 
       abortControllerRef.current.abort();
     }
     abortControllerRef.current = new AbortController();
@@ -123,7 +162,7 @@ export default function Home() {
     try {
       // --- PING ---
       setCurrentStage('ping');
-      await new Promise(resolve => setTimeout(resolve, 500)); // Simulate ping
+      await new Promise(resolve => setTimeout(resolve, 500)); 
       if (signal.aborted) throw new Error('Test aborted during ping');
       pingResult = 20 + Math.random() * 30;
 
@@ -155,7 +194,7 @@ export default function Home() {
 
         while (true) {
           if (signal.aborted) {
-            await reader.cancel(); // Ensure reader is cancelled
+            await reader.cancel(); 
             reader.releaseLock();
             throw new Error('Download aborted by user');
           }
@@ -191,13 +230,11 @@ export default function Home() {
             variant: 'destructive',
         });
         finalDownloadSpeed = 0; 
-        // Do not set stage/loading here, finally block will handle it.
-        // Only rethrow if it's not an abort error that we are already handling.
         if (!(fetchError.name === 'AbortError' || fetchError.message.includes('aborted'))) {
              setResults({ downloadSpeedMbps: 0, uploadSpeedMbps: 0, pingMilliseconds: pingResult });
-             setCurrentStage('finished'); // Mark as finished even if download failed partially
+             setCurrentStage('finished'); 
         }
-        throw fetchError; // Rethrow to be caught by outer try-catch
+        throw fetchError; 
       }
 
       const downloadEndTime = Date.now();
@@ -255,34 +292,31 @@ export default function Home() {
     } catch (error: any) {
       if (error.name === 'AbortError' || error.message.includes('aborted') || (signal && signal.aborted)) {
         console.log('Speed test was aborted.');
-        // Toast is handled by handleStopTest or if aborted not by explicit stop, it's logged.
-        if (!isLoading) { // If not already stopped by handleStopTest
+        if (!isLoading) { 
              toast({ title: t('testAbortedTitle'), description: t('testAbortedDescription') });
         }
       } else {
         console.error('Error running speed test:', error);
         toast({ title: t('errorTitle'), description: error.message || t('genericError'), variant: 'destructive' });
       }
-      // Reset to idle only if an error occurred that wasn't a planned finish
+      
       if (currentStage !== 'finished') {
         setCurrentStage('idle');
       }
     } finally {
       setCurrentSpeed(0);
-      setIsLoading(false); // This ensures loading is false even if an error occurs or test is stopped
-      if (currentStage !== 'finished' && currentStage !== 'idle') { // If stopped mid-test or errored out
+      setIsLoading(false); 
+      if (currentStage !== 'finished' && currentStage !== 'idle') { 
         setActiveTestFileSize(null);
       } else if (currentStage === 'finished') {
-        // Keep activeTestFileSize for display with results, will clear on next test or stop
+        // AI suggestion will be triggered by useEffect
       }
-      abortControllerRef.current = null; // Always clear ref here
+      abortControllerRef.current = null; 
 
       if (uploadAnimationRef.current) {
         cancelAnimationFrame(uploadAnimationRef.current);
         uploadAnimationRef.current = null;
       }
-      // If test finishes normally, activeTestFileSize will be cleared when starting a new test or stopping.
-      // If it errors or is stopped, it's cleared here or in handleStopTest.
     }
   };
   
@@ -312,7 +346,7 @@ export default function Home() {
         }
         return t('upload');
       default:
-         if (results && activeTestFileSize) { // Show file size with results if test was specific
+         if (results && activeTestFileSize) { 
             const sizeConfig = fileTestSizes.find(fts => fts.size === activeTestFileSize);
             const friendlyName = sizeConfig ? t(sizeConfig.labelKey) : `${activeTestFileSize}MB`;
             return t('speedTestFor', {size: friendlyName});
@@ -410,7 +444,7 @@ export default function Home() {
           />
         </div>
         
-        <div className="mt-8 w-full max-w-2xl flex flex-col items-center space-y-3">
+        <div className="mt-4 w-full max-w-2xl flex flex-col items-center space-y-3">
           <p className="text-sm text-muted-foreground">{t('fileSizeButtonsLabel')}</p>
           <div className="flex flex-wrap justify-center gap-2">
             {fileTestSizes.map((item) => (
@@ -433,6 +467,14 @@ export default function Home() {
           className="w-full max-w-xs"
           locale={locale}
          />
+
+        <AISuggestionDisplay
+            suggestion={aiSuggestion}
+            isLoading={isGeneratingSuggestion}
+            error={aiSuggestionError}
+            className="w-full max-w-2xl mt-4"
+            locale={locale}
+        />
       </main>
     </div>
   );

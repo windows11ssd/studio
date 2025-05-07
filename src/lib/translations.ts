@@ -41,6 +41,10 @@ export const translations = {
     downloadingFileSize: "جاري تنزيل {size}",
     uploadingFileSize: "جاري رفع {size}",
     speedTestFor: "اختبار السرعة لـ {size}",
+    aiSuggestionsTitle: "اقتراحات الذكاء الاصطناعي",
+    generatingSuggestions: "جاري إنشاء الاقتراحات...",
+    aiSuggestionError: "عذرًا، لم نتمكن من إنشاء اقتراحات في الوقت الحالي.",
+    noSuggestionsYet: "ستظهر اقتراحات الذكاء الاصطناعي هنا بعد إكمال اختبار السرعة.",
   },
   en: {
     netGauge: "ksatest",
@@ -83,6 +87,10 @@ export const translations = {
     downloadingFileSize: "Downloading {size}",
     uploadingFileSize: "Uploading {size}",
     speedTestFor: "Speed Test for {size}",
+    aiSuggestionsTitle: "AI Suggestions",
+    generatingSuggestions: "Generating suggestions...",
+    aiSuggestionError: "Sorry, we couldn't generate suggestions at this time.",
+    noSuggestionsYet: "AI suggestions will appear here after you complete a speed test.",
   },
 };
 
