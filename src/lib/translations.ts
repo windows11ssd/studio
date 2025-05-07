@@ -23,6 +23,11 @@ export const translations = {
     toggleToArabic: "التبديل إلى العربية",
     pageTitle: "اختبار سرعة ksatest",
     pageDescription: "قم بقياس سرعة اتصالك بالإنترنت مع ksatest.",
+    fileSizeButtonsLabel: "أو اختبر بأحجام ملفات محددة:",
+    test10MB: "10 ميجابايت",
+    test100MB: "100 ميجابايت",
+    test500MB: "500 ميجابايت",
+    test1GB: "1 جيجابايت",
   },
   en: {
     netGauge: "ksatest",
@@ -47,6 +52,11 @@ export const translations = {
     toggleToArabic: "التبديل إلى العربية",
     pageTitle: "ksatest Speed Test",
     pageDescription: "Measure your internet connection speed with ksatest.",
+    fileSizeButtonsLabel: "Or test with specific file sizes:",
+    test10MB: "10 MB",
+    test100MB: "100 MB",
+    test500MB: "500 MB",
+    test1GB: "1 GB",
   },
 };
 
