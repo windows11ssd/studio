@@ -239,11 +239,10 @@ export default function Home() {
             {fileTestSizes.map((item) => (
               <Button
                 key={item.size}
-                variant="outline"
                 size="sm"
                 onClick={() => handleStartTest(item.size)}
                 disabled={isLoading}
-                className="shadow-sm"
+                className="bg-accent text-accent-foreground hover:bg-accent/90 shadow-sm"
               >
                 {t(item.labelKey)}
               </Button>
