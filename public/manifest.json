@@ -1,7 +1,7 @@
 {
-  "name": "مقياس الشبكة نت جيدج",
-  "short_name": "نت جيدج",
-  "description": "قم بقياس سرعة اتصالك بالإنترنت مع نت جيدج.",
+  "name": "ksatest",
+  "short_name": "ksatest",
+  "description": "قم بقياس سرعة اتصالك بالإنترنت مع ksatest.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#FAFAFA",  /* Corresponds to --background in light mode */
@@ -23,3 +23,4 @@
     // Ensure these icon files exist in the public/icons directory
   ]
 }
+

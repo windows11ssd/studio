@@ -1,7 +1,7 @@
 
 export const translations = {
   ar: {
-    netGauge: "نت جيدج",
+    netGauge: "ksatest",
     measureSpeed: "قم بقياس سرعة اتصالك بالإنترنت.",
     startTest: "ابدأ الاختبار",
     testingInProgress: "جاري الاختبار...",
@@ -21,11 +21,11 @@ export const translations = {
     testingPing: "جاري اختبار البينج...",
     toggleToEnglish: "Switch to English",
     toggleToArabic: "التبديل إلى العربية",
-    pageTitle: "مقياس الشبكة نت جيدج",
-    pageDescription: "قم بقياس سرعة اتصالك بالإنترنت مع نت جيدج.",
+    pageTitle: "اختبار سرعة ksatest",
+    pageDescription: "قم بقياس سرعة اتصالك بالإنترنت مع ksatest.",
   },
   en: {
-    netGauge: "NetGauge",
+    netGauge: "ksatest",
     measureSpeed: "Measure your internet connection speed.",
     startTest: "Start Test",
     testingInProgress: "Testing...",
@@ -45,8 +45,8 @@ export const translations = {
     testingPing: "Testing Ping...",
     toggleToEnglish: "Switch to English",
     toggleToArabic: "التبديل إلى العربية",
-    pageTitle: "NetGauge Speed Test",
-    pageDescription: "Measure your internet connection speed with NetGauge.",
+    pageTitle: "ksatest Speed Test",
+    pageDescription: "Measure your internet connection speed with ksatest.",
   },
 };
 
@@ -56,3 +56,4 @@ export type TranslationKey = keyof typeof translations.ar; // Assuming 'ar' has 
 export const getTranslation = (locale: Locale, key: TranslationKey): string => {
   return translations[locale]?.[key] || translations.en[key] || key; // Fallback to English, then to the key itself
 };
+

@@ -11,7 +11,7 @@ import { LanguageProvider } from '@/contexts/language-context';
 export const metadata: Metadata = {
   // Title and description will be dynamically set on the client-side via context/translations
   // Provide generic or default values here for SSR and SEO.
-  title: 'NetGauge Speed Test | مقياس الشبكة نت جيدج',
+  title: 'ksatest Speed Test | اختبار سرعة ksatest',
   description: 'Measure your internet connection speed. قم بقياس سرعة اتصالك بالإنترنت.',
   manifest: "/manifest.json",
 };
