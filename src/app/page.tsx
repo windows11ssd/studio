@@ -362,10 +362,9 @@ export default function Home() {
         </div>
         <p className="text-muted-foreground">{t('measureSpeed')}</p>
         <Button
-            variant="outline"
             size="icon"
             onClick={toggleLanguage}
-            className={`absolute top-0 m-2 md:m-0 ${locale === 'ar' ? 'left-0' : 'right-0'}`}
+            className={`absolute top-0 m-2 md:m-0 ${locale === 'ar' ? 'left-0' : 'right-0'} bg-accent text-accent-foreground hover:bg-accent/90 shadow-md`}
             aria-label={locale === 'ar' ? t('toggleToEnglish') : t('toggleToArabic')}
             title={locale === 'ar' ? t('toggleToEnglish') : t('toggleToArabic')}
           >
