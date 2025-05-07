@@ -38,24 +38,45 @@ export function ServerInfoDisplay({
       try {
         const response = await fetch('/api/ipinfo');
         if (!response.ok) {
-          const errorData = await response.json().catch(() => ({ error: 'Failed to parse error response' }));
-          throw new Error(errorData.error || `Failed to fetch connection info: ${response.statusText}`);
+          let descriptiveError = `Failed to fetch connection info: ${response.status} ${response.statusText}.`;
+          try {
+            // Try to parse the error response as JSON, as our API route should provide JSON errors.
+            const errorJson = await response.json();
+            if (errorJson && errorJson.error) {
+              descriptiveError = errorJson.error; // Use the specific error message from our API.
+            }
+          } catch (jsonParseError) {
+            // If parsing as JSON fails, the body might be HTML or plain text.
+            // This indicates the scenario where "Failed to parse error response" would occur.
+            try {
+              const errorText = await response.text();
+              // Append a snippet of the raw response to the error for more context.
+              descriptiveError += ` Response body: ${errorText.substring(0, 200)}`; 
+            } catch (textParseError) {
+              // If we can't even get text, stick to the status and original assumption.
+               descriptiveError = 'Failed to parse error response from API. Status: ' + response.status + " " + response.statusText;
+            }
+          }
+          throw new Error(descriptiveError);
         }
+
         const data: ClientConnectionInfo = await response.json();
-        if (data && (data as any).error) { // Check if API route returned an error structure
+        // This handles the case where the API route returns 200 OK, but with an error field in the JSON
+        if (data && (data as any).error) {
           throw new Error((data as any).error);
         }
         setConnectionInfo(data);
+
       } catch (e: any) {
         console.error("Failed to fetch connection info:", e);
-        setError(t('errorServerInfo'));
+        setError(e.message || t('errorServerInfo')); // Set the error state with the message from the caught error
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchConnectionInfo();
-  }, [t]);
+  }, [t]); // Added t to dependency array as it's used in the effect
 
   const renderInfo = (labelKey: TranslationKey, value: string | null | undefined) => (
     <div className="flex justify-between items-center text-sm py-1">
@@ -66,7 +87,8 @@ export function ServerInfoDisplay({
   
   const locationString = connectionInfo?.city && connectionInfo?.country 
     ? `${connectionInfo.city}, ${connectionInfo.country}` 
-    : connectionInfo?.country || '--';
+    : connectionInfo?.city || connectionInfo?.country || '--';
+
 
   return (
     <Card className={cn('w-full', className)}>
@@ -110,3 +132,4 @@ export function ServerInfoDisplay({
     </Card>
   );
 }
+
