@@ -45,6 +45,7 @@ export const translations = {
     generatingSuggestions: "جاري إنشاء الاقتراحات...",
     aiSuggestionError: "عذرًا، لم نتمكن من إنشاء اقتراحات في الوقت الحالي.",
     noSuggestionsYet: "ستظهر اقتراحات الذكاء الاصطناعي هنا بعد إكمال اختبار السرعة.",
+    aiQuotaError: "لقد تجاوزت حد الاستخدام المجاني لواجهة برمجة تطبيقات الذكاء الاصطناعي. يرجى المحاولة مرة أخرى لاحقًا أو التحقق من خطتك.",
   },
   en: {
     netGauge: "ksatest",
@@ -91,6 +92,7 @@ export const translations = {
     generatingSuggestions: "Generating suggestions...",
     aiSuggestionError: "Sorry, we couldn't generate suggestions at this time.",
     noSuggestionsYet: "AI suggestions will appear here after you complete a speed test.",
+    aiQuotaError: "You have exceeded the free tier API quota. Please try again later or check your plan.",
   },
 };
 

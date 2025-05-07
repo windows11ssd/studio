@@ -96,10 +96,13 @@ export default function Home() {
             pingMilliseconds: results.pingMilliseconds,
           });
           setAiSuggestion(suggestionOutput.advice);
-        } catch (error) {
+        } catch (error: any) {
           console.error("Error fetching AI suggestion:", error);
-          // Do not use toast here as AISuggestionDisplay will show the error.
-          setAiSuggestionError(t('aiSuggestionError'));
+          let errorMessage = t('aiSuggestionError'); // Default error
+          if (error && error.message && (error.message.includes('429') || error.message.toLowerCase().includes('quota'))) {
+            errorMessage = t('aiQuotaError'); 
+          }
+          setAiSuggestionError(errorMessage);
           setAiSuggestion(null);
         } finally {
           setIsGeneratingSuggestion(false);
