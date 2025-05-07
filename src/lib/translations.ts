@@ -60,6 +60,10 @@ export const translations = {
     errorServerInfo: "تعذر تحميل معلومات الاتصال.",
     uploadServerInfoLabel: "خادم الرفع",
     uploadSimulatedServer: "محاكاة (لا يوجد خادم رفع محدد)",
+    testServerInfoTitle: "معلومات خادم الاختبار",
+    downloadServerLabel: "خادم التنزيل",
+    cloudflareNetworkName: "شبكة كلاودفلير",
+    simulatedServerName: "خادم محاكاة",
   },
   en: {
     netGauge: "ksatest",
@@ -121,6 +125,10 @@ export const translations = {
     errorServerInfo: "Could not load connection information.",
     uploadServerInfoLabel: "Upload Server",
     uploadSimulatedServer: "Simulated (No specific upload server)",
+    testServerInfoTitle: "Test Server Information",
+    downloadServerLabel: "Download Server",
+    cloudflareNetworkName: "Cloudflare Network",
+    simulatedServerName: "Simulated Server",
   },
 };
 

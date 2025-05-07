@@ -2,7 +2,7 @@
 'use client';
 
 import * as React from 'react';
-import { ArrowDownToLine, ArrowUpFromLine, Gauge, Play, RotateCw, Wifi, Languages, StopCircle } from 'lucide-react';
+import { ArrowDownToLine, ArrowUpFromLine, Gauge, Play, RotateCw, Wifi, Languages, StopCircle, Server } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ResultDisplay } from '@/components/result-display';
 import { CellTowerDisplay } from '@/components/cell-tower-display';
@@ -15,6 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { AISuggestionDisplay } from '@/components/ai-suggestion-display';
 import { generateClientSideSuggestions } from '@/lib/suggestions';
+import { TestServerInfoDisplay } from '@/components/test-server-info-display';
 
 
 type TestStage = 'idle' | 'ping' | 'download' | 'upload' | 'finished';
@@ -454,6 +455,16 @@ export default function Home() {
               </Button>
             ))}
           </div>
+        </div>
+        
+        {/* Test Server Info */}
+        <div className="w-full max-w-2xl">
+            <TestServerInfoDisplay
+                downloadServer={t('cloudflareNetworkName')}
+                uploadServer={t('simulatedServerName')}
+                locale={locale}
+                className="w-full"
+            />
         </div>
 
         {/* Cell Tower Info */}
