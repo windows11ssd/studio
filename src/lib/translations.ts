@@ -38,6 +38,9 @@ export const translations = {
     testAbortedTitle: "تم إلغاء الاختبار",
     testAbortedDescription: "تم إيقاف اختبار السرعة.",
     genericError: "حدث خطأ غير متوقع.",
+    downloadingFileSize: "جاري تنزيل {size}",
+    uploadingFileSize: "جاري رفع {size}",
+    speedTestFor: "اختبار السرعة لـ {size}",
   },
   en: {
     netGauge: "ksatest",
@@ -77,6 +80,9 @@ export const translations = {
     testAbortedTitle: "Test Aborted",
     testAbortedDescription: "The speed test was stopped.",
     genericError: "An unexpected error occurred.",
+    downloadingFileSize: "Downloading {size}",
+    uploadingFileSize: "Uploading {size}",
+    speedTestFor: "Speed Test for {size}",
   },
 };
 

@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -40,6 +39,7 @@ export default function Home() {
   const [isFetchingCellInfo, setIsFetchingCellInfo] = React.useState<boolean>(true);
   const [currentStage, setCurrentStage] = React.useState<TestStage>('idle');
   const [currentSpeed, setCurrentSpeed] = React.useState<number>(0);
+  const [activeTestFileSize, setActiveTestFileSize] = React.useState<number | null>(null);
   const abortControllerRef = React.useRef<AbortController | null>(null);
   const uploadAnimationRef = React.useRef<number | null>(null);
 
@@ -87,6 +87,7 @@ export default function Home() {
     setIsLoading(false);
     setCurrentStage('idle');
     setCurrentSpeed(0);
+    setActiveTestFileSize(null);
     // setResults(null); // Optionally clear results if a test is stopped midway
     toast({ title: t('testAbortedTitle'), description: t('testAbortedDescription') });
   };
@@ -98,6 +99,10 @@ export default function Home() {
     setResults(null);
     setCurrentSpeed(0);
     setCurrentStage('idle');
+    
+    const selectedFileSizeKey = fileSizeKeyParam || defaultFileSizeKey;
+    setActiveTestFileSize(selectedFileSizeKey);
+    console.log(`Starting test with file size key: ${selectedFileSizeKey}`);
 
     if (abortControllerRef.current) { // Should be null here, but as a safeguard
       abortControllerRef.current.abort();
@@ -110,9 +115,6 @@ export default function Home() {
       uploadAnimationRef.current = null;
     }
     
-    const selectedFileSizeKey = fileSizeKeyParam || defaultFileSizeKey;
-    console.log(`Starting test with file size key: ${selectedFileSizeKey}`);
-
 
     let finalDownloadSpeed = 0;
     let finalUploadSpeed = 0;
@@ -268,9 +270,10 @@ export default function Home() {
     } finally {
       setCurrentSpeed(0);
       setIsLoading(false); // This ensures loading is false even if an error occurs or test is stopped
-      if (abortControllerRef.current && !abortControllerRef.current.signal.aborted) {
-         // If not aborted by user, but finished or errored, ensure controller is nullified.
-         // If aborted by user, handleStopTest (or the signal itself) would have handled it.
+      if (currentStage !== 'finished' && currentStage !== 'idle') { // If stopped mid-test or errored out
+        setActiveTestFileSize(null);
+      } else if (currentStage === 'finished') {
+        // Keep activeTestFileSize for display with results, will clear on next test or stop
       }
       abortControllerRef.current = null; // Always clear ref here
 
@@ -278,16 +281,43 @@ export default function Home() {
         cancelAnimationFrame(uploadAnimationRef.current);
         uploadAnimationRef.current = null;
       }
+      // If test finishes normally, activeTestFileSize will be cleared when starting a new test or stopping.
+      // If it errors or is stopped, it's cleared here or in handleStopTest.
     }
   };
   
+  const fileTestSizes = [
+    { labelKey: 'test10MB', size: 10 },
+    { labelKey: 'test100MB', size: 100 },
+    { labelKey: 'test500MB', size: 500 },
+    { labelKey: 'test1GB', size: 1000 },
+  ] as const;
 
   const getGaugeLabel = () => {
     switch (currentStage) {
-      case 'ping': return t('testingPing');
-      case 'download': return t('download');
-      case 'upload': return t('upload');
-      default: return t('speed');
+      case 'ping':
+        return t('testingPing');
+      case 'download':
+        if (activeTestFileSize) {
+          const sizeConfig = fileTestSizes.find(fts => fts.size === activeTestFileSize);
+          const friendlyName = sizeConfig ? t(sizeConfig.labelKey) : `${activeTestFileSize}MB`;
+          return t('downloadingFileSize', { size: friendlyName });
+        }
+        return t('download');
+      case 'upload':
+        if (activeTestFileSize) {
+          const sizeConfig = fileTestSizes.find(fts => fts.size === activeTestFileSize);
+          const friendlyName = sizeConfig ? t(sizeConfig.labelKey) : `${activeTestFileSize}MB`;
+          return t('uploadingFileSize', { size: friendlyName });
+        }
+        return t('upload');
+      default:
+         if (results && activeTestFileSize) { // Show file size with results if test was specific
+            const sizeConfig = fileTestSizes.find(fts => fts.size === activeTestFileSize);
+            const friendlyName = sizeConfig ? t(sizeConfig.labelKey) : `${activeTestFileSize}MB`;
+            return t('speedTestFor', {size: friendlyName});
+         }
+        return t('speed');
     }
   };
 
@@ -315,13 +345,6 @@ export default function Home() {
       </>
     );
   };
-
-  const fileTestSizes = [
-    { labelKey: 'test10MB', size: 10 },
-    { labelKey: 'test100MB', size: 100 },
-    { labelKey: 'test500MB', size: 500 },
-    { labelKey: 'test1GB', size: 1000 },
-  ] as const;
 
 
   return (
@@ -357,7 +380,7 @@ export default function Home() {
          </div>
         <Button
           size="lg"
-          onClick={isLoading ? handleStopTest : () => handleStartTest()}
+          onClick={isLoading ? handleStopTest : () => { setActiveTestFileSize(null); handleStartTest(); }}
           className="w-48 bg-accent text-accent-foreground hover:bg-accent/90 rounded-full shadow-lg transition-transform duration-200 active:scale-95"
         >
           {getButtonContent()}
