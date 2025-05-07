@@ -1,30 +1,25 @@
-import type { Metadata } from 'next';
-import { Geist, Geist_Mono } from 'next/font/google';
+
+import type { Metadata, Viewport } from 'next';
+// Removed Geist_Sans and Geist_Mono imports as they are not Google Fonts and cause an error.
+// The application uses Tajawal font imported via globals.css.
 import './globals.css';
-import { Toaster } from "@/components/ui/toaster"; // Import Toaster
+import { Toaster } from "@/components/ui/toaster";
+import { LanguageProvider } from '@/contexts/language-context';
 
-const geistSans = Geist({
-  variable: '--font-geist-sans',
-  subsets: ['latin', 'arabic'], // Add Arabic subset if available and needed
-});
+// Removed geistSans and geistMono constant declarations.
 
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
-  subsets: ['latin', 'arabic'], // Add Arabic subset if available and needed
-});
-
-// Update metadata for PWA
 export const metadata: Metadata = {
-  title: 'مقياس الشبكة نت جيدج',
-  description: 'قم بقياس سرعة اتصالك بالإنترنت.',
-  manifest: "/manifest.json", // Link to the manifest file
-  // Optional: Add theme color and Apple-specific tags if needed
-  // themeColor: "#008080", // Corresponds to --accent
-  // appleWebApp: {
-  //   capable: true,
-  //   statusBarStyle: "default",
-  //   title: "NetGauge",
-  // },
+  // Title and description will be dynamically set on the client-side via context/translations
+  // Provide generic or default values here for SSR and SEO.
+  title: 'NetGauge Speed Test | مقياس الشبكة نت جيدج',
+  description: 'Measure your internet connection speed. قم بقياس سرعة اتصالك بالإنترنت.',
+  manifest: "/manifest.json",
+};
+
+export const viewport: Viewport = {
+  themeColor: "#008080", // Corresponds to --accent
+  width: 'device-width',
+  initialScale: 1,
 };
 
 export default function RootLayout({
@@ -33,17 +28,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
+    // Default lang and dir for SSR. LanguageProvider will update this on the client-side.
     <html lang="ar" dir="rtl">
-       <head>
-         {/* Add theme-color meta tag for PWA compatibility */}
-        <meta name="theme-color" content="#008080" />
-        {/* Ensure viewport settings are appropriate for mobile */}
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-      </head>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        {children}
-        <Toaster /> {/* Add Toaster component here */}
+      <head />
+      {/* Removed geistSans.variable and geistMono.variable from className */}
+      <body className="antialiased">
+        <LanguageProvider>
+          {children}
+          <Toaster />
+        </LanguageProvider>
       </body>
     </html>
   );
 }
+

@@ -1,26 +1,32 @@
+
 import type * as React from 'react';
 import { TowerControl, Info } from 'lucide-react';
 import type { CellTowerInfo } from '@/services/cell-tower';
 import { cn } from '@/lib/utils';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/ui/tooltip"
+} from "@/components/ui/tooltip";
+import type { Locale, TranslationKey } from '@/lib/translations';
+import { getTranslation } from '@/lib/translations';
 
 
 interface CellTowerDisplayProps {
   cellInfo: CellTowerInfo | null;
   isLoading?: boolean;
   className?: string;
+  locale: Locale;
 }
 
-export function CellTowerDisplay({ cellInfo, isLoading = false, className }: CellTowerDisplayProps) {
-  const renderInfo = (label: string, value: string | null | undefined) => (
+export function CellTowerDisplay({ cellInfo, isLoading = false, className, locale }: CellTowerDisplayProps) {
+  const t = (key: TranslationKey) => getTranslation(locale, key);
+
+  const renderInfo = (labelKey: TranslationKey, value: string | null | undefined) => (
     <div className="flex justify-between text-sm">
-      <span className="text-muted-foreground">{label}:</span>
+      <span className="text-muted-foreground">{t(labelKey)}:</span>
       <span className="font-medium">{value ?? '--'}</span>
     </div>
   );
@@ -31,7 +37,7 @@ export function CellTowerDisplay({ cellInfo, isLoading = false, className }: Cel
         <CardTitle className="text-base font-semibold flex items-center justify-between gap-2">
            <div className="flex items-center gap-2">
              <TowerControl className="h-5 w-5 text-accent" />
-             معلومات البرج (محاكاة)
+             {t('cellTowerInfoSimulated')}
           </div>
            <TooltipProvider delayDuration={100}>
             <Tooltip>
@@ -39,18 +45,13 @@ export function CellTowerDisplay({ cellInfo, isLoading = false, className }: Cel
                 <Info className="h-4 w-4 text-muted-foreground cursor-help" />
               </TooltipTrigger>
               <TooltipContent side="top" align="end" className="max-w-[250px]">
-                <p className="text-xs text-right">تفاصيل برج الخلية في الوقت الفعلي (معرف الخلية، LAC) غير متوفرة بشكل عام في متصفحات الويب. البيانات المعروضة هي محاكاة أو تستند إلى أمثلة.</p>
+                <p className={`text-xs ${locale === 'ar' ? 'text-right' : 'text-left'}`}>{t('towerInfoTooltip')}</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
         </CardTitle>
-         {/* Optional: Add a small text description directly if tooltip isn't enough
-         <CardDescription className="text-xs pt-1 flex items-center gap-1">
-           <Info className="h-3 w-3" /> Data is simulated due to browser limitations.
-         </CardDescription>
-         */}
       </CardHeader>
-      <CardContent className="space-y-1 pt-2"> {/* Added pt-2 for spacing */}
+      <CardContent className="space-y-1 pt-2">
         {isLoading ? (
           <div className="space-y-2">
             <div className="h-4 w-full animate-pulse rounded-md bg-muted" />
@@ -60,10 +61,10 @@ export function CellTowerDisplay({ cellInfo, isLoading = false, className }: Cel
           </div>
         ) : (
           <>
-            {renderInfo('معرف الخلية', cellInfo?.cellId)}
-            {renderInfo('LAC', cellInfo?.lac)}
-            {renderInfo('MCC', cellInfo?.mcc)}
-            {renderInfo('MNC', cellInfo?.mnc)}
+            {renderInfo('cellId', cellInfo?.cellId)}
+            {renderInfo('lac', cellInfo?.lac)}
+            {renderInfo('mcc', cellInfo?.mcc)}
+            {renderInfo('mnc', cellInfo?.mnc)}
           </>
         )}
       </CardContent>

@@ -1,17 +1,23 @@
+
 'use client';
 
 import * as React from 'react';
-import { ArrowDownToLine, ArrowUpFromLine, Gauge, Play, RotateCw, Wifi } from 'lucide-react';
+import { ArrowDownToLine, ArrowUpFromLine, Gauge, Play, RotateCw, Wifi, Languages } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ResultDisplay } from '@/components/result-display';
 import { CellTowerDisplay } from '@/components/cell-tower-display';
 import { SpeedGauge } from '@/components/speed-gauge';
 import { runSpeedTest, type SpeedTestResult } from '@/services/speed-test';
 import { getCellTowerInfo, type CellTowerInfo } from '@/services/cell-tower';
+import { useLanguage } from '@/contexts/language-context';
+import { getTranslation, type TranslationKey } from '@/lib/translations';
 
 type TestStage = 'idle' | 'ping' | 'download' | 'upload' | 'finished';
 
 export default function Home() {
+  const { locale, toggleLanguage } = useLanguage();
+  const t = (key: TranslationKey) => getTranslation(locale, key);
+
   const [results, setResults] = React.useState<SpeedTestResult | null>(null);
   const [cellInfo, setCellInfo] = React.useState<CellTowerInfo | null>(null);
   const [isLoading, setIsLoading] = React.useState<boolean>(false);
@@ -19,7 +25,10 @@ export default function Home() {
   const [currentStage, setCurrentStage] = React.useState<TestStage>('idle');
   const [currentSpeed, setCurrentSpeed] = React.useState<number>(0);
 
-  // Fetch cell info on initial load
+  React.useEffect(() => {
+    document.title = t('pageTitle');
+  }, [locale, t]);
+
   React.useEffect(() => {
     const fetchCellInfo = async () => {
       setIsFetchingCellInfo(true);
@@ -28,7 +37,6 @@ export default function Home() {
         setCellInfo(info);
       } catch (error) {
         console.error('Error fetching cell info:', error);
-        // Handle error state if needed
       } finally {
         setIsFetchingCellInfo(false);
       }
@@ -36,7 +44,6 @@ export default function Home() {
     fetchCellInfo();
   }, []);
 
-  // Simulate speed test progress
   const simulateProgress = (stage: TestStage, targetSpeed: number, duration: number = 2000) => {
     setCurrentStage(stage);
     let startTime: number | null = null;
@@ -44,17 +51,13 @@ export default function Home() {
       if (!startTime) startTime = timestamp;
       const elapsed = timestamp - startTime;
       const progressRatio = Math.min(elapsed / duration, 1);
-
-      // Simulate fluctuating speed, peaking towards the middle/end
-      const speedFluctuation = (Math.sin((progressRatio * Math.PI) - (Math.PI / 2)) + 1) / 2; // Ease in/out effect
-      const simulatedSpeed = targetSpeed * speedFluctuation * (0.8 + Math.random() * 0.4); // Add randomness
-
+      const speedFluctuation = (Math.sin((progressRatio * Math.PI) - (Math.PI / 2)) + 1) / 2;
+      const simulatedSpeed = targetSpeed * speedFluctuation * (0.8 + Math.random() * 0.4);
       setCurrentSpeed(simulatedSpeed);
-
       if (progressRatio < 1) {
         requestAnimationFrame(step);
       } else {
-         setCurrentSpeed(targetSpeed); // Set final speed
+         setCurrentSpeed(targetSpeed);
       }
     };
     requestAnimationFrame(step);
@@ -62,50 +65,29 @@ export default function Home() {
 
   const handleStartTest = async () => {
     setIsLoading(true);
-    setResults(null); // Clear previous results
+    setResults(null);
     setCurrentSpeed(0);
-
     try {
-       // Simulate Ping
        setCurrentStage('ping');
-       // In a real app, ping result would come from the test
-       await new Promise(resolve => setTimeout(resolve, 500)); // Short delay for ping
-       const pingResult = 30 + Math.random() * 20; // Simulate ping
-
-
-      // Simulate Download
-      simulateProgress('download', 50 + Math.random() * 50); // Simulate download up to 100 Mbps
-      await new Promise(resolve => setTimeout(resolve, 2500));
-
-
-       // Simulate Upload
-       simulateProgress('upload', 20 + Math.random() * 30); // Simulate upload up to 50 Mbps
+       await new Promise(resolve => setTimeout(resolve, 500));
+       const pingResult = 30 + Math.random() * 20;
+       simulateProgress('download', 50 + Math.random() * 50);
        await new Promise(resolve => setTimeout(resolve, 2500));
-
-
-      // Fetch actual results (replace with real API call simulation)
-      // const testResults = await runSpeedTest(); // Using the mock for now
+       simulateProgress('upload', 20 + Math.random() * 30);
+       await new Promise(resolve => setTimeout(resolve, 2500));
+       const finalDownload = 50 + Math.random() * 50;
+       const finalUpload = 20 + Math.random() * 30;
        const finalResults: SpeedTestResult = {
-         downloadSpeedMbps: currentSpeed, // Use the final simulated speed
-         uploadSpeedMbps: currentSpeed, // This would be different in reality
+         downloadSpeedMbps: finalDownload,
+         uploadSpeedMbps: finalUpload,
          pingMilliseconds: pingResult,
-       }
-       // Find final speeds from simulation
-        const finalDownload = 50 + Math.random() * 50;
-        const finalUpload = 20 + Math.random() * 30;
-        finalResults.downloadSpeedMbps = finalDownload;
-        finalResults.uploadSpeedMbps = finalUpload;
-
-
+       };
       setResults(finalResults);
       setCurrentStage('finished');
-      setCurrentSpeed(0); // Reset gauge after upload completes
-
-
+      setCurrentSpeed(0);
     } catch (error) {
       console.error('Error running speed test:', error);
       setCurrentStage('idle');
-      // Handle error state (e.g., show a toast message)
     } finally {
       setIsLoading(false);
     }
@@ -113,62 +95,69 @@ export default function Home() {
 
   const getGaugeLabel = () => {
     switch (currentStage) {
-      case 'ping': return 'جاري اختبار البينج...';
-      case 'download': return 'تنزيل';
-      case 'upload': return 'رفع';
-      default: return 'سرعة';
+      case 'ping': return t('testingPing');
+      case 'download': return t('download');
+      case 'upload': return t('upload');
+      default: return t('speed');
     }
-  }
+  };
 
   const getButtonContent = () => {
     if (isLoading) {
       return (
         <>
-          <RotateCw className="ml-2 h-4 w-4 animate-spin" />
-          جاري الاختبار...
+          <RotateCw className={`h-4 w-4 animate-spin ${locale === 'ar' ? 'ml-2' : 'mr-2'}`} />
+          {t('testingInProgress')}
         </>
       );
     }
     if (currentStage === 'finished') {
         return (
             <>
-             <RotateCw className="ml-2 h-4 w-4" />
-             اختبار مرة أخرى
+             <RotateCw className={`h-4 w-4 ${locale === 'ar' ? 'ml-2' : 'mr-2'}`} />
+             {t('testAgain')}
             </>
         );
     }
     return (
       <>
-        <Play className="ml-2 h-4 w-4" />
-        ابدأ الاختبار
+        <Play className={`h-4 w-4 ${locale === 'ar' ? 'ml-2' : 'mr-2'}`} />
+        {t('startTest')}
       </>
     );
   };
 
-
   return (
     <div className="container mx-auto flex min-h-screen flex-col items-center justify-center p-4 md:p-8">
-      <header className="mb-8 text-center">
-        <h1 className="text-4xl font-bold text-primary flex items-center justify-center gap-2">
-          <Wifi className="h-8 w-8 text-accent" /> نت جيدج
-        </h1>
-        <p className="text-muted-foreground">قم بقياس سرعة اتصالك بالإنترنت.</p>
+      <header className="mb-8 text-center relative w-full">
+        <div className="flex items-center justify-center">
+            <h1 className="text-4xl font-bold text-primary flex items-center justify-center gap-2">
+            <Wifi className="h-8 w-8 text-accent" /> {t('netGauge')}
+            </h1>
+        </div>
+        <p className="text-muted-foreground">{t('measureSpeed')}</p>
+        <Button
+            variant="outline"
+            size="icon"
+            onClick={toggleLanguage}
+            className={`absolute top-0 m-2 md:m-0 ${locale === 'ar' ? 'left-0' : 'right-0'}`}
+            aria-label={locale === 'ar' ? t('toggleToEnglish') : t('toggleToArabic')}
+            title={locale === 'ar' ? t('toggleToEnglish') : t('toggleToArabic')}
+          >
+            <Languages className="h-5 w-5" />
+        </Button>
       </header>
 
       <main className="flex w-full max-w-2xl flex-col items-center space-y-8">
-        {/* Gauge Display */}
          <div className="w-full p-6 rounded-lg shadow-md bg-card">
            <SpeedGauge
               currentSpeed={currentSpeed}
               label={getGaugeLabel()}
-              maxSpeed={150} // Adjust based on expected max speeds for visual scale
+              maxSpeed={150}
               className="mb-6"
-              unit="ميجابت/ثانية"
+              unit={t('mbps')}
             />
          </div>
-
-
-        {/* Start Button */}
         <Button
           size="lg"
           onClick={handleStartTest}
@@ -178,40 +167,37 @@ export default function Home() {
           {getButtonContent()}
         </Button>
 
-        {/* Results Display */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
           <ResultDisplay
-            icon={Gauge} // Using Gauge for Ping as WifiOff/Signal is not ideal
-            label="البينج"
+            icon={Gauge}
+            label={t('ping')}
             value={results?.pingMilliseconds?.toFixed(0) ?? null}
-            unit="مللي ثانية"
+            unit={t('ms')}
             isLoading={isLoading && currentStage !== 'idle'}
           />
           <ResultDisplay
             icon={ArrowDownToLine}
-            label="تنزيل"
+            label={t('download')}
             value={results?.downloadSpeedMbps?.toFixed(1) ?? null}
-            unit="ميجابت/ثانية"
+            unit={t('mbps')}
             isLoading={isLoading && currentStage !== 'idle' && currentStage !== 'ping'}
           />
           <ResultDisplay
             icon={ArrowUpFromLine}
-            label="رفع"
+            label={t('upload')}
             value={results?.uploadSpeedMbps?.toFixed(1) ?? null}
-            unit="ميجابت/ثانية"
+            unit={t('mbps')}
              isLoading={isLoading && currentStage !== 'idle' && currentStage !== 'ping' && currentStage !== 'download'}
           />
         </div>
 
-        {/* Cell Tower Info */}
         <CellTowerDisplay
           cellInfo={cellInfo}
           isLoading={isFetchingCellInfo}
           className="w-full max-w-xs"
+          locale={locale}
          />
       </main>
-
-      {/* Footer removed */}
     </div>
   );
 }
