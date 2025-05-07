@@ -2,7 +2,7 @@
 'use client';
 
 import * as React from 'react';
-import { ArrowDownToLine, ArrowUpFromLine, Gauge, Play, RotateCw, Wifi, Languages, StopCircle } from 'lucide-react';
+import { ArrowDownToLine, ArrowUpFromLine, Gauge, Play, RotateCw, Wifi, Languages, StopCircle, Server } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ResultDisplay } from '@/components/result-display';
 import { CellTowerDisplay } from '@/components/cell-tower-display';
@@ -14,6 +14,7 @@ import { getTranslation, type TranslationKey } from '@/lib/translations';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { AISuggestionDisplay } from '@/components/ai-suggestion-display';
+import { ServerInfoDisplay } from '@/components/server-info-display';
 import { generateClientSideSuggestions } from '@/lib/suggestions';
 
 
@@ -431,12 +432,21 @@ export default function Home() {
           </div>
         </div>
 
-        <CellTowerDisplay
-          cellInfo={cellInfo}
-          isLoading={isFetchingCellInfo}
-          className="w-full max-w-xs"
-          locale={locale}
-         />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-2xl">
+          <ServerInfoDisplay
+            downloadServerName={t('cloudflareNetwork')}
+            uploadServerName={t('uploadSimulatedServer')}
+            className="w-full"
+            locale={locale}
+          />
+          <CellTowerDisplay
+            cellInfo={cellInfo}
+            isLoading={isFetchingCellInfo}
+            className="w-full"
+            locale={locale}
+          />
+        </div>
+        
 
         <AISuggestionDisplay
             suggestion={suggestionText}

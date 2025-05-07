@@ -41,7 +41,7 @@ export const translations = {
     downloadingFileSize: "جاري تنزيل {size}",
     uploadingFileSize: "جاري رفع {size}",
     speedTestFor: "اختبار السرعة لـ {size}",
-    aiSuggestionsTitle: "نصائح مفيدة", // Renamed for neutrality, or keep as "AI Suggestions" if preferred for user familiarity
+    aiSuggestionsTitle: "نصائح مفيدة",
     noSuggestionsYet: "ستظهر الاقتراحات هنا بعد إكمال اختبار السرعة.",
     suggestionGenerationError: "عذرًا، لم نتمكن من إنشاء اقتراحات في الوقت الحالي.",
     advicePingPoor: "البينج لديك مرتفع جدًا. حاول الاقتراب من جهاز التوجيه (الراوتر) الخاص بك، أو استخدم كابل إيثرنت، أو تحقق من وجود ازدحام في الشبكة أو عدد كبير جدًا من الأجهزة المتصلة.",
@@ -52,6 +52,11 @@ export const translations = {
     adviceUploadFair: "سرعة الرفع لديك متوسطة. يجب أن تكون كافية للاستخدام العام، ولكن قد تحتاج إلى سرعة أعلى لرفع الملفات الكبيرة بشكل متكرر.",
     adviceAllGood: "سرعات الإنترنت لديك ممتازة! استمتع بتصفح ومشاهدة وألعاب سلسة.",
     adviceGenerallyOkay: "سرعات الإنترنت لديك جيدة بشكل عام. إذا واجهت أي مشاكل، يمكنك تجربة خطوات استكشاف الأخطاء وإصلاحها الشائعة مثل إعادة تشغيل جهاز التوجيه الخاص بك.",
+    serverInfoTitle: "معلومات الخادم",
+    serverNameLabel: "اسم الخادم",
+    serverLocationLabel: "الموقع",
+    cloudflareNetwork: "شبكة كلاودفلير",
+    uploadSimulatedServer: "محاكاة (لا يوجد خادم رفع محدد)",
   },
   en: {
     netGauge: "ksatest",
@@ -94,7 +99,7 @@ export const translations = {
     downloadingFileSize: "Downloading {size}",
     uploadingFileSize: "Uploading {size}",
     speedTestFor: "Speed Test for {size}",
-    aiSuggestionsTitle: "Helpful Tips", // Renamed for neutrality
+    aiSuggestionsTitle: "Helpful Tips",
     noSuggestionsYet: "Suggestions will appear here after you complete a speed test.",
     suggestionGenerationError: "Sorry, we couldn't generate suggestions at this time.",
     advicePingPoor: "Your ping is quite high. Try moving closer to your Wi-Fi router, using an Ethernet cable, checking for network congestion, or reducing the number of connected devices.",
@@ -105,6 +110,11 @@ export const translations = {
     adviceUploadFair: "Your upload speed is fair. It should be okay for general use, but could be faster for frequent large uploads.",
     adviceAllGood: "Your internet speeds look great! Enjoy smooth browsing, streaming, and gaming.",
     adviceGenerallyOkay: "Your internet speeds are generally okay. If you experience issues, you can try common troubleshooting steps like restarting your router.",
+    serverInfoTitle: "Server Information",
+    serverNameLabel: "Server Name",
+    serverLocationLabel: "Location",
+    cloudflareNetwork: "Cloudflare Network",
+    uploadSimulatedServer: "Simulated (No specific upload server)",
   },
 };
 
@@ -120,3 +130,4 @@ export const getTranslation = (locale: Locale, key: TranslationKey, params?: Rec
   }
   return translation;
 };
+
